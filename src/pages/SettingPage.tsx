@@ -457,7 +457,7 @@ export default function SettingPage() {
           <div className="mt-2 flex justify-center gap-4">
             <button onClick={() => setShowPrivacy(true)} className="text-[#01D6BE] hover:underline">Privacy Policy</button>
             <button onClick={() => setShowTerms(true)} className="text-[#01D6BE] hover:underline">Terms of Use</button>
-            <button onClick={() => setShowSupport(true)} className="text-[#01D6BE] hover:underline">Support</button>
+            <button onClick={() => setShowSupport(true)} className="text-[#01D6BE] hover:underline">Feedback</button>
           </div>
         </div>
       </div>
@@ -607,8 +607,8 @@ export default function SettingPage() {
                     <Headphones size={20} className="text-[#FF9500]" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-[#FFFFFF]">Support</h3>
-                    <p className="text-[11px] text-[#8E8E93]">We are here to help</p>
+                    <h3 className="text-base font-bold text-[#FFFFFF]">Feedback</h3>
+                    <p className="text-[11px] text-[#8E8E93]">We'd love to hear from you</p>
                   </div>
                 </div>
                 <button onClick={() => setShowSupport(false)} className="p-2 rounded-full hover:bg-[rgba(255,255,255,0.05)]">

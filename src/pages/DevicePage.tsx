@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { Menu, User, Search, Zap, Battery, AlertTriangle, X, Plus, QrCode, Trash2, Power, Bluetooth, RefreshCw } from 'lucide-react'
+import { User, Search, Zap, Battery, AlertTriangle, X, Plus, QrCode, Bluetooth, RefreshCw } from 'lucide-react'
 import ToggleSwitch from '../components/ToggleSwitch'
 import { usePowerStationStore } from '../stores/powerStationStore'
 import { useConnectionStore } from '../stores/connectionStore'
@@ -19,17 +19,13 @@ interface BleDevice {
 
 export default function DevicePage() {
   const navigate = useNavigate()
-  const { devices, toggleDevice, selectDevice, toggleDevices, deleteDevices } = usePowerStationStore()
+  const { devices, toggleDevice, selectDevice } = usePowerStationStore()
   const { setBleConnection } = useConnectionStore()
   const [activeFilter, setActiveFilter] = useState('All')
   const [searchQuery, setSearchQuery] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
   const [showQrScan, setShowQrScan] = useState(false)
   const [showBleScan, setShowBleScan] = useState(false)
-  
-  // Batch Control 模式
-  const [isBatchMode, setIsBatchMode] = useState(false)
-  const [selectedDevices, setSelectedDevices] = useState<Set<string>>(new Set())
   
   // BLE 扫描状态
   const [isScanning, setIsScanning] = useState(false)
@@ -77,51 +73,8 @@ export default function DevicePage() {
 
   // 处理点击设备跳转到设备详情页
   const handleDeviceClick = (deviceId: string) => {
-    if (isBatchMode) return
     selectDevice(deviceId)
     navigate(`/device/${deviceId}`)
-  }
-
-  // 切换 Batch Control 模式
-  const toggleBatchMode = () => {
-    setIsBatchMode(!isBatchMode)
-    setSelectedDevices(new Set())
-  }
-
-  // 切换设备选择
-  const toggleDeviceSelection = (deviceId: string) => {
-    const newSelected = new Set(selectedDevices)
-    if (newSelected.has(deviceId)) {
-      newSelected.delete(deviceId)
-    } else {
-      newSelected.add(deviceId)
-    }
-    setSelectedDevices(newSelected)
-  }
-
-  // 全选/取消全选
-  const toggleSelectAll = () => {
-    if (selectedDevices.size === filteredDevices.length) {
-      setSelectedDevices(new Set())
-    } else {
-      setSelectedDevices(new Set(filteredDevices.map(d => d.id)))
-    }
-  }
-
-  // 批量操作
-  const handleBatchTurnOn = () => {
-    toggleDevices(Array.from(selectedDevices), true)
-    setSelectedDevices(new Set())
-  }
-
-  const handleBatchTurnOff = () => {
-    toggleDevices(Array.from(selectedDevices), false)
-    setSelectedDevices(new Set())
-  }
-
-  const handleBatchDelete = () => {
-    deleteDevices(Array.from(selectedDevices))
-    setSelectedDevices(new Set())
   }
 
   // ---- BLE 扫描功能 ------------------------------------------------
@@ -311,14 +264,13 @@ export default function DevicePage() {
   return (
     <div className="h-full flex flex-col bg-[#000000] overflow-hidden">
       {/* Header */}
-      <div className="px-5 pt-4 pb-3 safe-area-top flex justify-between items-center">
-        <button 
-          onClick={toggleBatchMode}
-          className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors
-            ${isBatchMode ? 'bg-[#01D6BE] text-[#000000]' : 'bg-[#1C1C1E] text-[#FFFFFF]'}`}
-        >
-          <Menu size={20} />
-        </button>
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
+        className="px-5 pt-4 pb-3 safe-area-top flex justify-between items-center"
+      >
+        <div className="w-9" />
         <h2 className="text-xl font-bold text-[#FFFFFF]">Home</h2>
         <button
           onClick={() => setShowAddModal(true)}
@@ -326,12 +278,17 @@ export default function DevicePage() {
         >
           <Plus size={20} />
         </button>
-      </div>
+      </motion.div>
 
       {/* 可滚动内容 */}
       <div className="flex-1 overflow-y-auto scrollbar-hide px-5 pb-4">
         {/* 搜索栏 */}
-        <div className="relative mb-4">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.05, ease: [0.25, 0.46, 0.45, 0.94] }}
+          className="relative mb-4"
+        >
           <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8E8E93]">
             <Search size={18} />
           </div>
@@ -359,10 +316,15 @@ export default function DevicePage() {
               </motion.button>
             )}
           </AnimatePresence>
-        </div>
+        </motion.div>
 
         {/* 筛选标签 */}
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide mb-4 pb-1">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1, ease: [0.25, 0.46, 0.45, 0.94] }}
+          className="flex gap-2 overflow-x-auto scrollbar-hide mb-4 pb-1"
+        >
           {filters.map((filter) => (
             <button
               key={filter}
@@ -388,105 +350,42 @@ export default function DevicePage() {
               )}
             </button>
           ))}
-        </div>
+        </motion.div>
 
-        {/* Batch Control 操作栏 */}
-        <AnimatePresence>
-          {isBatchMode && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mb-4"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <button
-                  onClick={toggleSelectAll}
-                  className="text-[12px] text-[#01D6BE] font-medium"
-                >
-                  {selectedDevices.size === filteredDevices.length ? 'Deselect All' : 'Select All'}
-                </button>
-                <span className="text-[12px] text-[#8E8E93]">
-                  {selectedDevices.size} selected
-                </span>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleBatchTurnOn}
-                  disabled={selectedDevices.size === 0}
-                  className="flex-1 h-10 bg-[#34C759] rounded-[12px] text-[#000000] font-semibold text-[13px]
-                    flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Power size={16} />
-                  Turn On
-                </button>
-                <button
-                  onClick={handleBatchTurnOff}
-                  disabled={selectedDevices.size === 0}
-                  className="flex-1 h-10 bg-[#8E8E93] rounded-[12px] text-[#000000] font-semibold text-[13px]
-                    flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Power size={16} />
-                  Turn Off
-                </button>
-                <button
-                  onClick={handleBatchDelete}
-                  disabled={selectedDevices.size === 0}
-                  className="flex-1 h-10 bg-[#FF3B30] rounded-[12px] text-[#FFFFFF] font-semibold text-[13px]
-                    flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Trash2 size={16} />
-                  Delete
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* 设备列表标题 */}
-        <div className="flex justify-between items-center mb-3">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.15, ease: [0.25, 0.46, 0.45, 0.94] }}
+          className="flex justify-between items-center mb-3"
+        >
           <h3 className="text-base font-semibold text-[#FFFFFF]">Connected Devices</h3>
           <span className="text-[11px] px-2.5 py-1 rounded-full 
             bg-[rgba(1,214,190,0.12)] text-[#01D6BE]
             font-semibold">
             {activeCount} Active
           </span>
-        </div>
-
-        {/* 设备列表 */}
+        </motion.div>
         <div className="flex flex-col gap-2.5">
-          {filteredDevices.map((device) => (
+          {filteredDevices.map((device, index) => (
             <motion.div
               key={device.id}
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              onClick={() => !isBatchMode && handleDeviceClick(device.id)}
+              transition={{
+                duration: 0.4,
+                delay: index * 0.06,
+                ease: [0.25, 0.46, 0.45, 0.94],
+              }}
+              onClick={() => handleDeviceClick(device.id)}
               className={`flex items-center gap-3.5 p-4 bg-[#1C1C1E] rounded-[18px]
-                transition-all duration-200
-                ${!isBatchMode ? 'cursor-pointer active:bg-[#2C2C2E]' : ''}
+                cursor-pointer active:bg-[#2C2C2E] transition-all duration-200
                 ${hasAlert(device)
                   ? 'border-l-2 border-l-[#FF3B30]'
                   : ''
                 }`}
             >
-              {/* Batch Mode 多选框 */}
-              {isBatchMode && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); toggleDeviceSelection(device.id) }}
-                  className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 border-2 transition-colors
-                    ${selectedDevices.has(device.id)
-                      ? 'bg-[#01D6BE] border-[#01D6BE]'
-                      : 'border-[#48484A] hover:border-[#8E8E93]'
-                    }`}
-                >
-                  {selectedDevices.has(device.id) && (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000000" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>
-                  )}
-                </button>
-              )}
-
               <div className={`w-11 h-11 rounded-[14px] flex items-center justify-center flex-shrink-0
                 ${getIconColor(device.type)}`}>
                 {device.type === 'powerstation' ? <Battery size={22} /> : <Zap size={22} />}
@@ -512,14 +411,12 @@ export default function DevicePage() {
                 </div>
               </div>
 
-              {!isBatchMode && (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <ToggleSwitch
-                    isOn={device.isOn}
-                    onToggle={() => toggleDevice(device.id)}
-                  />
-                </div>
-              )}
+              <div onClick={(e) => e.stopPropagation()}>
+                <ToggleSwitch
+                  isOn={device.isOn}
+                  onToggle={() => toggleDevice(device.id)}
+                />
+              </div>
             </motion.div>
           ))}
         </div>
