@@ -30,7 +30,6 @@ export default function LoginPage() {
         </div>
         <div className="text-center">
           <h1 className="text-2xl font-bold text-[#FFFFFF]">Sierro</h1>
-          <p className="text-[13px] text-[#8E8E93] mt-1">四色光伏开放平台</p>
         </div>
       </motion.div>
 
@@ -41,22 +40,22 @@ export default function LoginPage() {
         transition={{ duration: 0.4, delay: 0.15 }}
         className="w-full max-w-sm bg-[#1C1C1E] border border-[rgba(1,214,190,0.12)] rounded-[28px] p-6"
       >
-        <h2 className="text-[18px] font-bold text-[#FFFFFF] mb-1">登录账号</h2>
-        <p className="text-[12px] text-[#8E8E93] mb-6">Sign in to your account</p>
+        <h2 className="text-[18px] font-bold text-[#FFFFFF] mb-1">Sign In</h2>
+        <p className="text-[12px] text-[#8E8E93] mb-6">Enter your credentials to continue</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* 账号输入 */}
           <div>
             <label className="text-[11px] font-semibold text-[#8E8E93] mb-1.5 flex items-center gap-1.5">
               <User size={12} />
-              账号
+              Account
             </label>
             <div className="relative">
               <input
                 type="text"
                 value={username}
                 onChange={e => { setUsername(e.target.value); clearError() }}
-                placeholder="请输入账号"
+                placeholder="Enter your account"
                 autoComplete="username"
                 className="w-full px-4 py-3 rounded-xl bg-[#000000] border border-[rgba(1,214,190,0.15)]
                   text-[#FFFFFF] text-[14px] placeholder:text-[#48484A]
@@ -69,14 +68,14 @@ export default function LoginPage() {
           <div>
             <label className="text-[11px] font-semibold text-[#8E8E93] mb-1.5 flex items-center gap-1.5">
               <Lock size={12} />
-              密码
+              Password
             </label>
             <div className="relative">
               <input
                 type={showPwd ? 'text' : 'password'}
                 value={password}
                 onChange={e => { setPassword(e.target.value); clearError() }}
-                placeholder="请输入密码"
+                placeholder="Enter your password"
                 autoComplete="current-password"
                 className="w-full px-4 py-3 pr-11 rounded-xl bg-[#000000] border border-[rgba(1,214,190,0.15)]
                   text-[#FFFFFF] text-[14px] placeholder:text-[#48484A]
@@ -117,10 +116,10 @@ export default function LoginPage() {
             {loading ? (
               <>
                 <Loader2 size={16} className="animate-spin" />
-                <span>登录中...</span>
+                <span>Signing in...</span>
               </>
             ) : (
-              '登 录'
+              'Sign In'
             )}
           </button>
         </form>
@@ -128,7 +127,7 @@ export default function LoginPage() {
         {/* 签名说明 */}
         <div className="mt-5 pt-4 border-t border-[rgba(1,214,190,0.08)]">
           <p className="text-[10px] text-[#48484A] text-center leading-relaxed">
-            接口签名已启用 · IOT-Open-Sign 验证
+            Secured by IOT-Open-Sign
             <br />
             AppID: rYGQpmYU5k
           </p>
