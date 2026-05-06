@@ -25,6 +25,12 @@ export const useAuthStore = create<AuthState>()(
       error: null,
 
       login: async (username: string, password: string) => {
+        // admin/admin 直接通过，不调接口
+        if (username === 'admin' && password === 'admin') {
+          set({ isAuthenticated: true, user: { username: 'admin' }, loading: false, error: null })
+          return true
+        }
+
         set({ loading: true, error: null })
         try {
           const result = await loginByAccount(username, password)
