@@ -75,11 +75,11 @@ export default function DevicePage() {
     }
   }
 
-  // 处理点击设备名称跳转到 Overview 页面
+  // 处理点击设备跳转到设备详情页
   const handleDeviceClick = (deviceId: string) => {
     if (isBatchMode) return
     selectDevice(deviceId)
-    navigate('/')
+    navigate(`/device/${deviceId}`)
   }
 
   // 切换 Batch Control 模式
@@ -319,7 +319,7 @@ export default function DevicePage() {
         >
           <Menu size={20} />
         </button>
-        <h2 className="text-xl font-bold text-[#FFFFFF]">Device</h2>
+        <h2 className="text-xl font-bold text-[#FFFFFF]">Home</h2>
         <button
           onClick={() => setShowAddModal(true)}
           className="w-9 h-9 rounded-full bg-[#1C1C1E] flex items-center justify-center text-[#FFFFFF] hover:bg-[#2C2C2E] transition-colors"

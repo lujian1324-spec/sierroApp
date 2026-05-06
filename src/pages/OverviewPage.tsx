@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
 import {
   Bell,
   Sun,
@@ -14,6 +15,7 @@ import {
   LayoutGrid,
   Info,
   ChevronDown,
+  ChevronLeft,
   Battery,
 } from 'lucide-react'
 import BatteryRing from '../components/BatteryRing'
@@ -43,6 +45,7 @@ const powerOutageAlert = {
 }
 
 export default function OverviewPage() {
+  const navigate = useNavigate()
   const { powerStation, settings, devices, selectedDeviceId, selectDevice } = usePowerStationStore()
   const [showNotifications, setShowNotifications] = useState(false)
   const [showDisplaySettings, setShowDisplaySettings] = useState(false)
@@ -65,11 +68,17 @@ export default function OverviewPage() {
   // 设备详情页面显示状态
   const [showDeviceDetail, setShowDeviceDetail] = useState(false)
 
-  // Real-Time Power 图表数据源切换
-  const [powerDataSource, setPowerDataSource] = useState<'ac' | 'solar' | 'output'>('ac')
+  // Real-Time Power 图表数据源切换（4 页面：Battery / AC / Solar / Output）
+  const [powerDataSource, setPowerDataSource] = useState<'battery' | 'ac' | 'solar' | 'output'>('battery')
 
-  // 三组模拟数据
+  // 四组模拟数据
   const powerData = {
+    battery: {
+      value: powerStation.batteryLevel,
+      points: "0,50 30,42 60,45 90,35 120,40 150,28 180,38 210,32 240,36 270,30 300,34",
+      fillPoints: "0,50 30,42 60,45 90,35 120,40 150,28 180,38 210,32 240,36 270,30 300,34 300,80 0,80",
+      color: '#34C759',
+    },
     ac: {
       value: 400,
       points: "0,50 30,42 60,45 90,35 120,40 150,28 180,38 210,32 240,36 270,30 300,34",
@@ -171,21 +180,28 @@ export default function OverviewPage() {
 
       {/* 可滚动内容 */}
       <div className="flex-1 overflow-y-auto scrollbar-hide">
-        {/* Header - 扁平化：设备下拉菜单 + 信息图标 + 铃铛图标 */}
+        {/* Header - 左：返回箭头 | 中：设备下拉菜单居中 | 右：铃铛 */}
         <div className="flex justify-between items-center px-5 py-3">
-          <div className="relative" ref={dropdownRef}>
-            {/* 设备选择下拉菜单 */}
+          {/* 左：返回箭头 */}
+          <button
+            onClick={() => navigate('/')}
+            className="w-9 h-9 rounded-full bg-[#1C1C1E] flex items-center justify-center text-[#FFFFFF] hover:bg-[#2C2C2E] transition-colors flex-shrink-0"
+          >
+            <ChevronLeft size={22} />
+          </button>
+
+          {/* 中：设备选择下拉菜单（居中） */}
+          <div className="relative flex-1 flex justify-center" ref={dropdownRef}>
             <button
               onClick={() => setShowDeviceDropdown(!showDeviceDropdown)}
-              className="flex items-center gap-2 group"
+              className="flex items-center gap-2"
             >
-              <h2 className="text-xl font-bold text-[#FFFFFF] tracking-wide">{powerStation.name}</h2>
+              <h2 className="text-[16px] font-bold text-[#FFFFFF] tracking-wide">{powerStation.name}</h2>
               <ChevronDown 
-                size={18} 
+                size={16} 
                 className={`text-[#8E8E93] transition-transform duration-200 ${showDeviceDropdown ? 'rotate-180' : ''}`}
               />
             </button>
-            <p className="text-xs text-[#8E8E93] mt-0.5">Connected</p>
 
             {/* 下拉菜单 */}
             <AnimatePresence>
@@ -238,35 +254,27 @@ export default function OverviewPage() {
             </AnimatePresence>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* 信息图标 - 点击进入设备详情 */}
-            <button 
-              onClick={() => setShowDeviceDetail(true)}
-              className="w-9 h-9 rounded-full bg-[#1C1C1E] flex items-center justify-center hover:bg-[#2C2C2E] transition-colors"
-            >
-              <Info size={18} className="text-[#8E8E93]" />
-            </button>
-            <motion.button
-              onClick={handleBellClick}
-              disabled={isPushing}
-              whileTap={{ scale: 0.85 }}
-              animate={isPushing ? { 
-                scale: [1, 1.1, 1],
-                transition: { duration: 0.5, repeat: Infinity }
-              } : {}}
-              className="w-9 h-9 rounded-full bg-[#1C1C1E] flex items-center justify-center relative
-                disabled:opacity-70 transition-colors"
-            >
-              {isPushing ? (
-                <Loader2 size={16} className="text-[#01D6BE] animate-spin" />
-              ) : (
-                <Bell size={18} className="text-[#FFFFFF]" />
-              )}
-              {unreadCount > 0 && !isPushing && (
-                <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#FF3B30]" />
-              )}
-            </motion.button>
-          </div>
+          {/* 右：铃铛（故障提示） */}
+          <motion.button
+            onClick={handleBellClick}
+            disabled={isPushing}
+            whileTap={{ scale: 0.85 }}
+            animate={isPushing ? { 
+              scale: [1, 1.1, 1],
+              transition: { duration: 0.5, repeat: Infinity }
+            } : {}}
+            className="w-9 h-9 rounded-full bg-[#1C1C1E] flex items-center justify-center relative
+              disabled:opacity-70 transition-colors flex-shrink-0"
+          >
+            {isPushing ? (
+              <Loader2 size={16} className="text-[#01D6BE] animate-spin" />
+            ) : (
+              <Bell size={18} className="text-[#FFFFFF]" />
+            )}
+            {unreadCount > 0 && !isPushing && (
+              <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#FF3B30]" />
+            )}
+          </motion.button>
         </div>
 
         {/* 电量英雄区 - 扁平化 */}
@@ -359,9 +367,10 @@ export default function OverviewPage() {
             </svg>
           </div>
           
-          {/* 底部三个可切换选项 - AC / Solar / Output */}
+          {/* 底部四个可切换选项 - Battery / AC / Solar / Output */}
           <div className="flex justify-around pt-3 border-t border-[rgba(255,255,255,0.06)]">
             {[
+              { key: 'battery' as const, label: 'Battery', icon: Battery },
               { key: 'ac' as const, label: 'AC', icon: LayoutGrid },
               { key: 'solar' as const, label: 'Solar', icon: Sun },
               { key: 'output' as const, label: 'Output', icon: TrendingUp },
@@ -385,10 +394,11 @@ export default function OverviewPage() {
           </div>
         </motion.div>
 
-        {/* 三个小卡片 - AC / Solar / Output */}
+        {/* 四个小卡片 - Battery / AC / Solar / Output */}
         <div className="px-5 mb-5">
-          <div className="grid grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-4 gap-2">
             {[
+              { label: 'Battery', value: `${powerStation.batteryLevel}%`, icon: Battery, color: '#34C759' },
               { label: 'AC', value: '400W', icon: Zap, color: '#01D6BE' },
               { label: 'Solar', value: '0W', icon: Sun, color: '#8E8E93' },
               { label: 'Output', value: '200W', icon: TrendingUp, color: '#8E8E93' },
