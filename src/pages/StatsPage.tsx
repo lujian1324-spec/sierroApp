@@ -1,6 +1,6 @@
 ﻿import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Sun, Zap, DollarSign, Globe, Monitor, Smartphone, Lightbulb, Share2 } from 'lucide-react'
+import { Sun, Zap, Globe, Share2 } from 'lucide-react'
 import BatteryRing from '../components/BatteryRing'
 import { usePowerStationStore } from '../stores/powerStationStore'
 
@@ -18,13 +18,6 @@ const dayLabels = {
   Week:  ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
   Month: ['W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7'],
 }
-
-const deviceUsage = [
-  { name: 'Laptop', icon: Monitor, kwh: 3.8, percent: 40 },
-  { name: 'Phone Charging', icon: Smartphone, kwh: 1.6, percent: 17 },
-  { name: 'LED Lighting', icon: Lightbulb, kwh: 1.1, percent: 12 },
-  { name: 'Other Devices', icon: Zap, kwh: 2.9, percent: 31 },
-]
 
 // 统一主题颜色
 const themeColor = '#01D6BE'
@@ -51,7 +44,7 @@ export default function StatsPage() {
               if (navigator.share) {
                 navigator.share({
                   title: 'PowerFlow Energy Stats',
-                  text: `Solar Charged: 12.8 kWh · Total Output: 9.4 kWh · Cost Saved: $2.1`,
+                  text: `Total Output: 9.4 kWh · CO₂ Reduced: 6.4 kg`,
                   url: window.location.href,
                 })
               } else {
@@ -90,18 +83,16 @@ ${period === p
         className="grid grid-cols-2 gap-2.5 mb-4"
         >
         {[
-        { icon: Sun, value: '12.8', unit: 'kWh', label: 'Solar Charged', trend: '↑ 18%', trendUp: true },
         { icon: Zap, value: '9.4', unit: 'kWh', label: 'Total Output', trend: '↓ 5%', trendUp: false },
-        { icon: DollarSign, value: '$2.1', unit: '', label: 'Cost Saved', trend: '↑ 12%', trendUp: true },
         { icon: Globe, value: '6.4', unit: 'kg', label: 'CO₂ Reduced', trend: '↑ 18%', trendUp: true },
         ].map((stat, i) => {
         const Icon = stat.icon
         return (
-        <div 
+        <div
         key={i}
         className="bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] rounded-[20px] p-4 relative overflow-hidden"
         >
-        <div 
+        <div
         className="absolute top-0 left-0 right-0 h-0.5"
         style={{ backgroundColor: themeColor }}
         />
@@ -212,46 +203,6 @@ uid="stats-page"
 </div>
 </div>
 
-        {/* 用电分布 */}
-        <div className="mb-4">
-        <div className="text-[13px] font-bold text-[#8E8E93] tracking-wider uppercase mb-2.5">
-        Power Distribution
-        </div>
-        <div className="flex flex-col gap-2.5">
-        {deviceUsage.map((device) => {
-        const Icon = device.icon
-        
-        return (
-        <div 
-        key={device.name}
-        className="bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] rounded-[14px] p-3.5 
-        flex items-center gap-3"
-        >
-        <Icon size={20} style={{ color: themeColor }} />
-        <div className="flex-1">
-        <div className="text-[13px] font-semibold text-[#FFFFFF]">{device.name}</div>
-        <div className="mt-1.5 h-1.5 bg-[rgba(255,255,255,0.06)] rounded-full overflow-hidden">
-        <div 
-        className="h-full rounded-full transition-all duration-500"
-        style={{ 
-        width: `${device.percent}%`,
-        background: themeColor,
-        boxShadow: `0 0 8px ${themeColor}66`
-        }}
-        />
-        </div>
-        </div>
-        <div className="text-right">
-        <div className="text-[15px] font-bold" style={{ color: themeColor }}>
-        {device.kwh}<span className="text-[11px] text-[#8E8E93]">kWh</span>
-        </div>
-        <div className="text-[11px] text-[#8E8E93] mt-0.5">{device.percent}%</div>
-        </div>
-        </div>
-        )
-        })}
-        </div>
-        </div>
  </div>
  </div>
   )

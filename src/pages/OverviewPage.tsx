@@ -18,6 +18,11 @@ import {
   ChevronLeft,
   Battery,
   Settings,
+  Moon,
+  Shield,
+  Leaf,
+  AlertTriangle,
+  CircleDot,
 } from 'lucide-react'
 import BatteryRing from '../components/BatteryRing'
 import ToggleSwitch from '../components/ToggleSwitch'
@@ -38,6 +43,15 @@ const notifications = [
   { id: 4, type: 'info', title: 'ECO Mode Available', desc: 'Output load below 10W threshold', time: '2h ago', read: true },
 ]
 
+// 设备报警信息
+const deviceAlerts = [
+  { id: 1, severity: 'warning', title: 'AC Overload Protection', desc: 'AC Out 1 load exceeded 1200W, output reduced automatically', time: '3 min ago', resolved: false },
+  { id: 2, severity: 'error', title: 'High Temperature Alert', desc: 'Battery temperature reached 45°C, charging paused', time: '12 min ago', resolved: false },
+  { id: 3, severity: 'warning', title: 'Low Battery Warning', desc: 'Battery level dropped below 20%', time: '28 min ago', resolved: false },
+  { id: 4, severity: 'info', title: 'Solar Input Unstable', desc: 'Solar panel voltage fluctuation detected', time: '1h ago', resolved: true },
+  { id: 5, severity: 'info', title: 'Firmware Update Available', desc: 'New firmware v2.1.3 is ready to install', time: '3h ago', resolved: true },
+]
+
 // 锁屏断电警报弹窗数据
 const powerOutageAlert = {
   title: 'Power outage. Backup activated.',
@@ -51,9 +65,15 @@ export default function OverviewPage() {
   const [showNotifications, setShowNotifications] = useState(false)
   const [showDisplaySettings, setShowDisplaySettings] = useState(false)
   const [showLockScreenAlert, setShowLockScreenAlert] = useState(false)
+  const [showAlerts, setShowAlerts] = useState(false)
   const [notifList, setNotifList] = useState(notifications)
+  const [alertList, setAlertList] = useState(deviceAlerts)
   const [pushPermission, setPushPermission] = useState<NotificationPermission>('default')
   const [isPushing, setIsPushing] = useState(false)
+
+  // 快速操作模式
+  const [sleepMode, setSleepMode] = useState(false)
+  const [activeMode, setActiveMode] = useState<'backup' | 'saving'>('backup')
   
   // 设备下拉菜单状态
   const [showDeviceDropdown, setShowDeviceDropdown] = useState(false)
@@ -264,33 +284,24 @@ export default function OverviewPage() {
               <Settings size={18} />
             </button>
             <motion.button
-              onClick={handleBellClick}
-              disabled={isPushing}
+              onClick={() => setShowAlerts(true)}
               whileTap={{ scale: 0.85 }}
-              animate={isPushing ? { 
-                scale: [1, 1.1, 1],
-                transition: { duration: 0.5, repeat: Infinity }
-              } : {}}
               className="w-9 h-9 rounded-full bg-[#1C1C1E] flex items-center justify-center relative
-                disabled:opacity-70 transition-colors"
+                transition-colors"
             >
-              {isPushing ? (
-                <Loader2 size={16} className="text-[#01D6BE] animate-spin" />
-              ) : (
-                <Bell size={18} className="text-[#FFFFFF]" />
-              )}
-              {unreadCount > 0 && !isPushing && (
+              <Bell size={18} className="text-[#FFFFFF]" />
+              {unreadCount > 0 && (
                 <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#FF3B30]" />
               )}
             </motion.button>
           </div>
         </div>
 
-        {/* 电量英雄区 - 扁平化 */}
+        {/* 电量英雄区 - 扁平化 + Battery/AC/Solar/Output 四卡片 */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mx-5 mb-5 bg-[#1C1C1E] rounded-[24px] p-5"
+          className="mx-5 mb-4 bg-[#1C1C1E] rounded-[24px] p-5"
         >
           <div className="flex justify-center mb-4">
             <BatteryRing
@@ -300,8 +311,27 @@ export default function OverviewPage() {
             />
           </div>
 
-          {/* 输入/输出功率标签 - Input 绿色高亮，Output 灰色 */}
-          <div className="flex justify-center gap-4 mb-4">
+          {/* Battery / AC / Solar / Output 四卡片 - 圆环下方 */}
+          <div className="grid grid-cols-4 gap-2 mb-4">
+            {[
+              { label: 'Battery', value: `${powerStation.batteryLevel}%`, icon: Battery, color: '#34C759' },
+              { label: 'AC', value: '400W', icon: Zap, color: '#01D6BE' },
+              { label: 'Solar', value: '0W', icon: Sun, color: '#8E8E93' },
+              { label: 'Output', value: '200W', icon: TrendingUp, color: '#8E8E93' },
+            ].map((item) => {
+              const Icon = item.icon
+              return (
+                <div key={item.label} className="bg-[#000000] rounded-[14px] p-2.5 flex flex-col items-center">
+                  <Icon size={14} className="mb-1" style={{ color: item.color }} />
+                  <div className="text-[14px] font-bold text-[#FFFFFF]">{item.value}</div>
+                  <div className="text-[9px] text-[#8E8E93]">{item.label}</div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* 输入/输出功率标签 */}
+          <div className="flex justify-center gap-4">
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[rgba(1,214,190,0.15)] border border-[rgba(1,214,190,0.3)]">
               <TrendingDown size={13} className="text-[#01D6BE]" />
               <span className="text-[11px] text-[#01D6BE]">Input</span>
@@ -315,6 +345,81 @@ export default function OverviewPage() {
               <span className="text-[12px] font-semibold text-[#8E8E93]">
                 {powerStation.outputPower}W
               </span>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* 快速操作开关区 */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="mx-5 mb-4"
+        >
+          <div className="text-[11px] font-bold text-[#8E8E93] tracking-widest uppercase mb-2.5 px-1">
+            Quick Controls
+          </div>
+          <div className="bg-[#1C1C1E] rounded-[20px] overflow-hidden">
+            {/* Sleep Mode */}
+            <div className="flex items-center justify-between px-4 py-3.5 border-b border-[rgba(255,255,255,0.06)]">
+              <div className="flex items-center gap-3">
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors
+                  ${sleepMode ? 'bg-[rgba(1,214,190,0.15)]' : 'bg-[rgba(255,255,255,0.06)]'}`}>
+                  <Moon size={16} className={sleepMode ? 'text-[#01D6BE]' : 'text-[#8E8E93]'} />
+                </div>
+                <div>
+                  <div className="text-[13px] font-semibold text-[#FFFFFF]">Sleep Mode</div>
+                  <div className="text-[10px] text-[#8E8E93]">Low power standby · 5W output</div>
+                </div>
+              </div>
+              <ToggleSwitch
+                isOn={sleepMode}
+                onToggle={() => setSleepMode(!sleepMode)}
+                size="sm"
+              />
+            </div>
+
+            {/* Backup Mode / Saving Mode 切换 */}
+            <div className="flex items-center justify-between px-4 py-3.5">
+              <div className="flex items-center gap-3">
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors
+                  ${activeMode === 'backup' ? 'bg-[rgba(255,149,0,0.15)]' : 'bg-[rgba(52,199,89,0.15)]'}`}>
+                  {activeMode === 'backup' 
+                    ? <Shield size={16} className="text-[#FF9500]" />
+                    : <Leaf size={16} className="text-[#34C759]" />
+                  }
+                </div>
+                <div>
+                  <div className="text-[13px] font-semibold text-[#FFFFFF]">
+                    {activeMode === 'backup' ? 'Backup Mode' : 'Saving Mode'}
+                  </div>
+                  <div className="text-[10px] text-[#8E8E93]">
+                    {activeMode === 'backup' ? 'Prioritize backup reserve' : 'Optimize energy efficiency'}
+                  </div>
+                </div>
+              </div>
+              <div className="flex bg-[#000000] rounded-full p-0.5">
+                <button
+                  onClick={() => setActiveMode('backup')}
+                  className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all
+                    ${activeMode === 'backup'
+                      ? 'bg-[#FF9500] text-[#000000]'
+                      : 'text-[#8E8E93] hover:text-[#FFFFFF]'
+                    }`}
+                >
+                  Backup
+                </button>
+                <button
+                  onClick={() => setActiveMode('saving')}
+                  className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all
+                    ${activeMode === 'saving'
+                      ? 'bg-[#34C759] text-[#000000]'
+                      : 'text-[#8E8E93] hover:text-[#FFFFFF]'
+                    }`}
+                >
+                  Saving
+                </button>
+              </div>
             </div>
           </div>
         </motion.div>
@@ -403,27 +508,6 @@ export default function OverviewPage() {
           </div>
         </motion.div>
 
-        {/* 四个小卡片 - Battery / AC / Solar / Output */}
-        <div className="px-5 mb-5">
-          <div className="grid grid-cols-4 gap-2">
-            {[
-              { label: 'Battery', value: `${powerStation.batteryLevel}%`, icon: Battery, color: '#34C759' },
-              { label: 'AC', value: '400W', icon: Zap, color: '#01D6BE' },
-              { label: 'Solar', value: '0W', icon: Sun, color: '#8E8E93' },
-              { label: 'Output', value: '200W', icon: TrendingUp, color: '#8E8E93' },
-            ].map((item) => {
-              const Icon = item.icon
-              return (
-                <div key={item.label} className="bg-[#1C1C1E] rounded-[18px] p-3.5 flex flex-col items-center">
-                  <Icon size={18} className="mb-2" style={{ color: item.color }} />
-                  <div className="text-[11px] text-[#8E8E93] mb-1">{item.label}</div>
-                  <div className="text-[16px] font-bold text-[#FFFFFF]">{item.value}</div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
 
       </div>
 
@@ -506,6 +590,102 @@ export default function OverviewPage() {
                   )
                 })}
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ===== 设备报警信息面板 ===== */}
+      <AnimatePresence>
+        {showAlerts && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-[rgba(0,0,0,0.6)] z-50 flex items-end"
+            onClick={() => setShowAlerts(false)}
+          >
+            <motion.div
+              initial={{ y: 300, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 300, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full bg-[#1C1C1E] rounded-t-[28px] p-5 pb-8"
+            >
+              <div className="w-10 h-1 bg-[rgba(255,255,255,0.15)] rounded-full mx-auto mb-4" />
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle size={18} className="text-[#FF9500]" />
+                  <h3 className="text-base font-bold text-[#FFFFFF]">Device Alerts</h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  {alertList.some(a => !a.resolved) && (
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-[rgba(255,59,48,0.12)] text-[#FF3B30] font-semibold">
+                      {alertList.filter(a => !a.resolved).length} Active
+                    </span>
+                  )}
+                  <button
+                    onClick={() => setShowAlerts(false)}
+                    className="w-7 h-7 rounded-full bg-[rgba(255,255,255,0.08)] flex items-center justify-center"
+                  >
+                    <X size={14} className="text-[#8E8E93]" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2.5 max-h-[400px] overflow-y-auto scrollbar-hide">
+                {alertList.map((alert) => {
+                  const severityColors: Record<string, { bg: string; dot: string; text: string }> = {
+                    error: { bg: 'bg-[rgba(255,59,48,0.06)]', dot: '#FF3B30', text: 'text-[#FF3B30]' },
+                    warning: { bg: 'bg-[rgba(255,149,0,0.06)]', dot: '#FF9500', text: 'text-[#FF9500]' },
+                    info: { bg: 'bg-[rgba(1,214,190,0.04)]', dot: '#01D6BE', text: 'text-[#01D6BE]' },
+                  }
+                  const colors = severityColors[alert.severity] || severityColors.info
+
+                  return (
+                    <div
+                      key={alert.id}
+                      onClick={() => setAlertList(prev => prev.map(a => a.id === alert.id ? { ...a, resolved: true } : a))}
+                      className={`flex items-start gap-3 p-3.5 rounded-[16px] cursor-pointer transition-colors
+                        ${alert.resolved ? 'bg-[rgba(255,255,255,0.02)]' : colors.bg}`}
+                    >
+                      <div className="mt-0.5 flex-shrink-0">
+                        {alert.resolved 
+                          ? <Check size={14} className="text-[#34C759]" />
+                          : <CircleDot size={14} style={{ color: colors.dot }} />
+                        }
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className={`text-[13px] font-semibold ${alert.resolved ? 'text-[#48484A]' : 'text-[#FFFFFF]'}`}>
+                          {alert.title}
+                        </div>
+                        <div className={`text-[11px] mt-0.5 ${alert.resolved ? 'text-[#48484A]' : 'text-[#8E8E93]'}`}>
+                          {alert.desc}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                        <span className="text-[10px] text-[#48484A]">{alert.time}</span>
+                        {!alert.resolved && (
+                          <span className={`text-[9px] font-semibold uppercase ${colors.text}`}>
+                            {alert.severity}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {alertList.some(a => !a.resolved) && (
+                <button
+                  onClick={() => setAlertList(prev => prev.map(a => ({ ...a, resolved: true })))}
+                  className="w-full mt-4 py-3 rounded-xl bg-[rgba(1,214,190,0.1)] text-[#01D6BE] text-[13px] font-semibold
+                    active:scale-[0.98] transition-transform"
+                >
+                  Dismiss All
+                </button>
+              )}
             </motion.div>
           </motion.div>
         )}
