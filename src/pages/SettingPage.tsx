@@ -200,7 +200,7 @@ export default function SettingPage() {
     { title: '2. License Grant', content: 'We grant you a limited, non-exclusive, non-transferable license to use the app for personal, non-commercial purposes on devices you own or control.' },
     { title: '3. Prohibited Activities', content: 'You may not: reverse engineer the app, use it for illegal purposes, interfere with other users, or attempt to gain unauthorized access to our systems.' },
     { title: '4. Disclaimer of Warranties', content: 'The app is provided "as is" without warranties of any kind. We do not guarantee uninterrupted service or that the app will meet your specific requirements.' },
-    { title: '5. Limitation of Liability', content: 'To the maximum extent permitted by law, Sierro Technology shall not be liable for any indirect, incidental, or consequential damages arising from app usage.' },
+    { title: '5. Limitation of Liability', content: 'To the maximum extent permitted by law, Sierro Inc. shall not be liable for any indirect, incidental, or consequential damages arising from app usage.' },
     { title: '6. Changes to Terms', content: 'We may update these terms from time to time. Continued use of the app after changes constitutes acceptance of the new terms.' },
   ]
 
@@ -453,7 +453,7 @@ export default function SettingPage() {
         {/* 版本信息 */}
         <div className="text-center py-4 text-[11px] text-[#48484A] leading-relaxed">
           <div>Sierro App · v{appVersion.version} (Build {appVersion.build})</div>
-          <div>© 2026 Sierro Technology Co., Ltd.</div>
+          <div>© 2026 Sierro Inc.</div>
           <div className="mt-2 flex justify-center gap-4">
             <button onClick={() => setShowPrivacy(true)} className="text-[#01D6BE] hover:underline">Privacy Policy</button>
             <button onClick={() => setShowTerms(true)} className="text-[#01D6BE] hover:underline">Terms of Use</button>

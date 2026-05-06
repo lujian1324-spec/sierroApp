@@ -1,5 +1,5 @@
 /**
- * 四色光伏开放平台 - API 客户端
+ * Sierro Inc. - API 客户端
  * 自动为每个请求注入 IOT 签名头（IOT-Open-AppID / IOT-Open-Nonce / IOT-Open-Sign）
  */
 

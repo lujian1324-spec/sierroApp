@@ -1,5 +1,5 @@
 /**
- * 四色光伏开放平台 - 认证 API
+ * Sierro Inc. - 认证 API
  * 登录接口: POST /login/account
  * 登录接口受签名拦截（/login/** 除 /login/logout 均拦截）
  */

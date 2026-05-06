@@ -543,7 +543,7 @@ export default function DeviceDetailPage({ onBack }: DeviceDetailPageProps) {
 
         {/* 底部信息 */}
         <div className="text-center pt-4 text-[11px] text-[#48484A]">
-          <div>Sierro Technology Co., Ltd.</div>
+          <div>Sierro Inc.</div>
           <div className="mt-1">Made with precision in Shenzhen</div>
         </div>
       </div>
