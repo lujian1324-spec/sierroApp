@@ -5,8 +5,8 @@ import { useAuthStore } from '../stores/authStore'
 
 export default function LoginPage() {
   const { login, loading, error, clearError } = useAuthStore()
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
+  const [username, setUsername] = useState('admin')
+  const [password, setPassword] = useState('admin')
   const [showPwd, setShowPwd] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
