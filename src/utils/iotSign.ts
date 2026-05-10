@@ -17,8 +17,8 @@ import CryptoJS from 'crypto-js'
 
 // ───────── 应用凭据（每次调用时从 localStorage 读取，fallback 到前端硬编码默认值） ─────────
 function getCredentials(): { appId: string; appSecret: string } {
-  const appId = localStorage.getItem('OPEN_APP_ID') ?? 'rBrTRfAPXz'
-  const appSecret = localStorage.getItem('OPEN_APP_SECRET') ?? 'I4D0KRr2339z3pQ/at91V9BpFAOe54DaTafwSm6suIQ='
+  const appId = localStorage.getItem('OPEN_APP_ID') ?? 'rYGQpmYU5k'
+  const appSecret = localStorage.getItem('OPEN_APP_SECRET') ?? 'GhJXQYEHphHlyiqYnBGE'
   return { appId, appSecret }
 }
 

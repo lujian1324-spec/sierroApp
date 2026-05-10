@@ -37,7 +37,6 @@ export const useAuthStore = create<AuthState>()(
       login: async (username: string, password: string) => {
         set({ loading: true, error: null })
 
-        // ── 1. 尝试真实 API 登录 ──
         try {
           const result = await loginByAccount(username, password)
 
@@ -46,24 +45,13 @@ export const useAuthStore = create<AuthState>()(
             return true
           }
 
-          // 真实 API 返回业务失败（如密码错误）
-          // 若用户名/密码是 admin/admin → 允许 Dev 降级登录
-          if (username === 'admin' && password === 'admin') {
-            set({ isAuthenticated: true, user: { username: 'admin', isDev: true }, loading: false, error: null })
-            return true
-          }
-
-          const msg = result.message ?? result.msg ?? 'Invalid credentials'
+          // 业务失败：展示后端返回的错误信息
+          const msg = result.localMessage ?? result.message ?? result.msg ?? 'Login failed'
           set({ loading: false, error: msg, isAuthenticated: false })
           return false
-        } catch {
-          // ── 2. 网络不可达 → Dev 降级（admin/admin 通行）──
-          if (username === 'admin' && password === 'admin') {
-            set({ isAuthenticated: true, user: { username: 'admin', isDev: true }, loading: false, error: null })
-            return true
-          }
-
-          set({ loading: false, error: 'Network error — please try again', isAuthenticated: false })
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : 'Network error — please try again'
+          set({ loading: false, error: msg, isAuthenticated: false })
           return false
         }
       },
