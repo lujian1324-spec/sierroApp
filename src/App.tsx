@@ -10,6 +10,7 @@ import LoginPage from './pages/LoginPage'
 import SmartSchedulePage from './pages/SmartSchedulePage'
 import { useRealtimeSimulator } from './hooks/useRealtimeSimulator'
 import { useAuthStore } from './stores/authStore'
+import { ToastContainer, useToast } from './components/Toast'
 
 /** 路由守卫：未登录跳转到 /login */
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -23,6 +24,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 function App() {
   const location = useLocation()
   const isAuthenticated = useAuthStore(s => s.isAuthenticated)
+  const { toasts, dismiss } = useToast()
   useRealtimeSimulator()
 
   // 登录页单独渲染，不包含底部导航
@@ -74,6 +76,8 @@ function App() {
 
   return (
     <div className="h-full w-full bg-bg-base flex flex-col overflow-hidden">
+      {/* Toast 全局通知层 */}
+      <ToastContainer toasts={toasts} onDismiss={dismiss} />
       {/* 主内容区域 */}
       <div className="flex-1 overflow-hidden relative">
         <AnimatePresence mode="wait">

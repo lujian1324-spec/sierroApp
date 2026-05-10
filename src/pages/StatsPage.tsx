@@ -1,6 +1,6 @@
 ﻿import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Sun, Zap, Globe, Share2 } from 'lucide-react'
+import { Sun, Zap, Globe, Share2, BarChart3, WifiOff } from 'lucide-react'
 import BatteryRing from '../components/BatteryRing'
 import { usePowerStationStore } from '../stores/powerStationStore'
 
@@ -28,6 +28,30 @@ export default function StatsPage() {
 
   const currentData = allData[period]
   const days = dayLabels[period]
+
+  // 无设备/离线时显示 Empty State
+  const hasData = powerStation.batteryLevel > 0 || powerStation.cycleCount > 0
+
+  // ── Empty State ──────────────────────────────────────────
+  const emptyState = !hasData ? (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex flex-col items-center justify-center py-20 px-8"
+    >
+      <div className="w-16 h-16 rounded-2xl bg-[#1C1C1E] flex items-center justify-center mb-4">
+        <BarChart3 size={32} className="text-[#48484A]" />
+      </div>
+      <h3 className="text-[16px] font-bold text-[#FFFFFF] mb-2">No Data Yet</h3>
+      <p className="text-[13px] text-[#8E8E93] text-center leading-relaxed mb-6">
+        Connect a device to start tracking energy usage and statistics.
+      </p>
+      <div className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-[#1C1C1E] border border-[rgba(255,255,255,0.06)]">
+        <WifiOff size={14} className="text-[#48484A]" />
+        <span className="text-[12px] text-[#48484A]">No device connected</span>
+      </div>
+    </motion.div>
+  ) : null
 
   return (
  <div className="h-full flex flex-col bg-[#000000] overflow-hidden pt-6">
@@ -76,6 +100,11 @@ ${period === p
 
 {/* 可滚动内容 */}
  <div className="flex-1 overflow-y-auto scrollbar-hide px-5 pb-4">
+        {/* Empty State */}
+        {emptyState}
+
+        {/* 以下内容仅在有数据时显示 */}
+        {hasData && (<>
         {/* 概览卡片 */}
         <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -202,7 +231,7 @@ uid="stats-page"
 </div>
 </div>
 </div>
-
+        </>)}
  </div>
  </div>
   )

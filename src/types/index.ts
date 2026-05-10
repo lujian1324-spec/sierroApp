@@ -7,6 +7,16 @@ export interface Device {
   batteryLevel: number;
   isOn: boolean;
   power?: number;
+  // T7: API 字段扩展
+  deviceId?: string;       // 云端设备 ID（from /device/list）
+  firmwareVersion?: string;
+  lastSeen?: number;       // Unix timestamp
+  soc?: number;            // 精确 SOC（来自实时状态）
+  acPower?: number;        // AC 功率 W
+  solarPower?: number;     // 光伏功率 W
+  outputPower?: number;    // 输出功率 W
+  batteryTemp?: number;    // 电池温度 °C
+  workMode?: 0 | 1 | 2;   // 0=正常 1=备份 2=节能
 }
 
 // 端口类型

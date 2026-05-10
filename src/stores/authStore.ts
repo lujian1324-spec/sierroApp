@@ -1,5 +1,6 @@
 /**
  * 认证状态管理
+ * T17: 真实 API 优先登录，失败时降级 admin/admin（Dev 模式）
  */
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
@@ -16,6 +17,15 @@ interface AuthState {
   clearError: () => void
 }
 
+/** 判断业务响应码是否成功 */
+function isSuccess(code: number | string): boolean {
+  return (
+    code === 200 || code === '200' ||
+    code === 0   || code === '0'   ||
+    code === 'success'
+  )
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
@@ -25,35 +35,35 @@ export const useAuthStore = create<AuthState>()(
       error: null,
 
       login: async (username: string, password: string) => {
-        // admin/admin 直接通过，不调接口
-        if (username === 'admin' && password === 'admin') {
-          set({ isAuthenticated: true, user: { username: 'admin' }, loading: false, error: null })
-          return true
-        }
-
         set({ loading: true, error: null })
+
+        // ── 1. 尝试真实 API 登录 ──
         try {
           const result = await loginByAccount(username, password)
 
-          // 平台返回码判断（兼容 code=200 / code='0' / code='success'）
-          const ok =
-            result.code === 200 ||
-            result.code === '200' ||
-            result.code === 0 ||
-            result.code === '0' ||
-            result.code === 'success'
-
-          if (ok && result.data) {
+          if (isSuccess(result.code) && result.data) {
             set({ isAuthenticated: true, user: result.data, loading: false, error: null })
             return true
-          } else {
-            const msg = result.message ?? result.msg ?? '登录失败，请检查账号密码'
-            set({ loading: false, error: msg, isAuthenticated: false })
-            return false
           }
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : '网络错误，请稍后重试'
+
+          // 真实 API 返回业务失败（如密码错误）
+          // 若用户名/密码是 admin/admin → 允许 Dev 降级登录
+          if (username === 'admin' && password === 'admin') {
+            set({ isAuthenticated: true, user: { username: 'admin', isDev: true }, loading: false, error: null })
+            return true
+          }
+
+          const msg = result.message ?? result.msg ?? 'Invalid credentials'
           set({ loading: false, error: msg, isAuthenticated: false })
+          return false
+        } catch {
+          // ── 2. 网络不可达 → Dev 降级（admin/admin 通行）──
+          if (username === 'admin' && password === 'admin') {
+            set({ isAuthenticated: true, user: { username: 'admin', isDev: true }, loading: false, error: null })
+            return true
+          }
+
+          set({ loading: false, error: 'Network error — please try again', isAuthenticated: false })
           return false
         }
       },

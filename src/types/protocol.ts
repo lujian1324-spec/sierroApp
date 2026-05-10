@@ -104,15 +104,18 @@ export interface ModbusFrame {
 
 // -------------------- 数据库 Schema --------------------
 
-/** 功率历史记录（每 10 秒一条） */
+/** 功率历史记录（5分钟采样，30天保留） */
 export interface PowerHistoryRecord {
   id?: number
   timestamp: number // Unix ms
+  soc?: number           // 电池电量 %（T9 新增）
   batteryLevel: number
   inputPower: number
   outputPower: number
+  solarPower?: number    // 光伏功率 W（T9 新增）
   temperature: number
   mode: string
+  deviceId?: string      // 设备 ID（T11 告警关联）
 }
 
 /** 告警事件记录 */

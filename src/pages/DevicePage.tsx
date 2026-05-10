@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { User, Search, Zap, Battery, AlertTriangle, X, Plus, QrCode, Bluetooth, RefreshCw } from 'lucide-react'
 import ToggleSwitch from '../components/ToggleSwitch'
+import { DeviceListSkeleton } from '../components/SkeletonCard'
 import { usePowerStationStore } from '../stores/powerStationStore'
 import { useConnectionStore } from '../stores/connectionStore'
 import { getBleManager, destroyBleManager } from '../protocols/bleManager'
@@ -26,6 +27,7 @@ export default function DevicePage() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [showQrScan, setShowQrScan] = useState(false)
   const [showBleScan, setShowBleScan] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   
   // BLE 扫描状态
   const [isScanning, setIsScanning] = useState(false)
@@ -40,6 +42,12 @@ export default function DevicePage() {
   const [qrResult, setQrResult] = useState<string | null>(null)
   const [qrError, setQrError] = useState<string | null>(null)
   const animationFrameRef = useRef<number | null>(null)
+
+  // 首次加载骨架屏：模拟 600ms 数据加载
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 600)
+    return () => clearTimeout(timer)
+  }, [])
 
   const hasAlert = (device: typeof devices[0]) =>
     device.batteryLevel < 30 || device.status === 'offline'
@@ -368,7 +376,9 @@ export default function DevicePage() {
           </span>
         </motion.div>
         <div className="flex flex-col gap-2.5">
-          {filteredDevices.map((device, index) => (
+          {isLoading ? (
+            <DeviceListSkeleton count={3} />
+          ) : filteredDevices.map((device, index) => (
             <motion.div
               key={device.id}
               initial={{ opacity: 0, y: 20 }}
@@ -421,7 +431,7 @@ export default function DevicePage() {
           ))}
         </div>
 
-        {filteredDevices.length === 0 && (
+        {!isLoading && filteredDevices.length === 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

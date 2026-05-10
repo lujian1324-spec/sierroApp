@@ -20,6 +20,7 @@ import {
   MapPin,
   DollarSign,
   Calendar,
+  Edit2,
 } from 'lucide-react'
 import { usePowerStationStore } from '../stores/powerStationStore'
 import type { PeakShavingSchedule } from '../types'
@@ -84,6 +85,21 @@ export default function SmartSchedulePage() {
   const [showSettings, setShowSettings] = useState(false)
   const [showTouLookup, setShowTouLookup] = useState(false)
   const [expandedSchedule, setExpandedSchedule] = useState<string | null>(null)
+
+  // T2: 编辑日程 modal 状态
+  const [editingSchedule, setEditingSchedule] = useState<PeakShavingSchedule | null>(null)
+  const [editForm, setEditForm] = useState<Partial<PeakShavingSchedule>>({})
+
+  const openEditModal = (schedule: PeakShavingSchedule) => {
+    setEditingSchedule(schedule)
+    setEditForm({ ...schedule })
+  }
+  const handleSaveEdit = () => {
+    if (editingSchedule && editForm.name && editForm.startTime && editForm.endTime) {
+      updatePeakShavingSchedule(editingSchedule.id, editForm)
+      setEditingSchedule(null)
+    }
+  }
 
   // TOU 查找
   const [zipInput, setZipInput] = useState(peakShavingSettings.zipCode || '')
@@ -613,6 +629,16 @@ export default function SmartSchedulePage() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
+                              openEditModal(schedule)
+                            }}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-[rgba(1,214,190,0.12)] text-[#01D6BE] text-[12px] font-medium"
+                          >
+                            <Edit2 size={12} />
+                            Edit
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
                               toggleScheduleEnabled(schedule.id, !schedule.enabled)
                             }}
                             className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-medium transition-colors
@@ -842,6 +868,108 @@ export default function SmartSchedulePage() {
                   className="flex-1 h-11 rounded-[14px] bg-[#2C2C2E] text-[#8E8E93] text-[14px] font-medium"
                 >
                   Enter Custom
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ===== Edit Schedule Modal (T2) ===== */}
+      <AnimatePresence>
+        {editingSchedule && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-[rgba(0,0,0,0.8)] z-50 flex items-end"
+            onClick={() => setEditingSchedule(null)}
+          >
+            <motion.div
+              initial={{ y: 300, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 300, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full bg-[#1C1C1E] rounded-t-[28px] p-6 pb-10"
+            >
+              <div className="w-10 h-1 bg-[rgba(255,255,255,0.15)] rounded-full mx-auto mb-5" />
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-lg font-bold text-[#FFFFFF]">Edit Schedule</h3>
+                <button
+                  onClick={() => setEditingSchedule(null)}
+                  className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center text-[#8E8E93]"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {/* Name */}
+                <div>
+                  <label className="text-[11px] text-[#8E8E93] mb-2 block">Schedule Name</label>
+                  <input
+                    type="text"
+                    value={editForm.name || ''}
+                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                    className="w-full h-11 bg-[#2C2C2E] rounded-[14px] px-4 text-[14px] text-[#FFFFFF] outline-none"
+                  />
+                </div>
+
+                {/* Type */}
+                <div>
+                  <label className="text-[11px] text-[#8E8E93] mb-2 block">Type</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {Object.entries(scheduleTypeConfig).map(([type, config]) => (
+                      <button
+                        key={type}
+                        onClick={() => setEditForm({ ...editForm, type: type as PeakShavingSchedule['type'] })}
+                        className={`flex items-center gap-2 p-3 rounded-[14px] transition-colors
+                          ${editForm.type === type ? 'bg-[#2C2C2E] border border-[#01D6BE]' : 'bg-[#2C2C2E]'}`}
+                      >
+                        <config.icon size={18} style={{ color: config.color }} />
+                        <span className="text-[13px] text-[#FFFFFF]">{config.emoji} {config.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Time */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] text-[#8E8E93] mb-2 block">Start Time</label>
+                    <input
+                      type="time"
+                      value={editForm.startTime || ''}
+                      onChange={(e) => setEditForm({ ...editForm, startTime: e.target.value })}
+                      className="w-full h-11 bg-[#2C2C2E] rounded-[14px] px-4 text-[14px] text-[#FFFFFF] outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-[#8E8E93] mb-2 block">End Time</label>
+                    <input
+                      type="time"
+                      value={editForm.endTime || ''}
+                      onChange={(e) => setEditForm({ ...editForm, endTime: e.target.value })}
+                      className="w-full h-11 bg-[#2C2C2E] rounded-[14px] px-4 text-[14px] text-[#FFFFFF] outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => setEditingSchedule(null)}
+                  className="flex-1 h-11 rounded-[14px] bg-[#2C2C2E] text-[#FFFFFF] text-[14px] font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={!editForm.name}
+                  className="flex-1 h-11 rounded-[14px] bg-[#01D6BE] text-[#000000] text-[14px] font-semibold disabled:opacity-50"
+                >
+                  Save Changes
                 </button>
               </div>
             </motion.div>

@@ -66,6 +66,12 @@ export default function SettingPage() {
   // Reset 确认弹窗
   const [showResetConfirm, setShowResetConfirm] = useState(false)
 
+  // 分组折叠状态
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({})
+  const toggleSection = (key: string) => {
+    setCollapsedSections(prev => ({ ...prev, [key]: !prev[key] }))
+  }
+
   // 个人信息编辑页面
   const [showProfileEdit, setShowProfileEdit] = useState(false)
 
@@ -394,9 +400,26 @@ export default function SettingPage() {
 
         {/* 系统设置 */}
         <div className="mb-4">
-          <div className="text-[11px] font-bold text-[#8E8E93] tracking-widest uppercase mb-2 px-1">
-            System
-          </div>
+          <button
+            onClick={() => toggleSection('system')}
+            className="w-full text-[11px] font-bold text-[#8E8E93] tracking-widest uppercase mb-2 px-1 flex items-center justify-between"
+          >
+            <span>System</span>
+            <ChevronRight
+              size={12}
+              className={`transition-transform duration-200 ${collapsedSections['system'] ? '' : 'rotate-90'}`}
+            />
+          </button>
+          <AnimatePresence initial={false}>
+            {!collapsedSections['system'] && (
+              <motion.div
+                key="system-content"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
+                className="overflow-hidden"
+              >
           <div className="bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] rounded-[20px] overflow-hidden">
             {systemItems.map((item, i) => {
               const Icon = item.icon
@@ -448,6 +471,9 @@ export default function SettingPage() {
               )
             })}
           </div>
+          </motion.div>
+          )}
+          </AnimatePresence>
         </div>
 
         {/* 版本信息 */}

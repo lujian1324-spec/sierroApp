@@ -21,9 +21,10 @@ import type {
   AlertQuery,
   UserProfile,
 } from '../types/protocol'
+import type { PeakShavingSettings } from '../types'
 
 const DB_NAME = 'powerflow-db'
-const DB_VERSION = 2
+const DB_VERSION = 3   // T10/T11: 升至 v3，增加 smart_schedule store
 
 /** 最大保留条数（避免无限增长） */
 const MAX_POWER_HISTORY = 8640 // ~24h @ 10s interval
@@ -54,6 +55,10 @@ type PowerFlowDB = IDBPDatabase<{
   user_profile: {
     key: string
     value: UserProfile
+  }
+  smart_schedule: {
+    key: string
+    value: PeakShavingSettings
   }
 }>
 
@@ -86,6 +91,10 @@ async function getDB(): Promise<PowerFlowDB> {
     user_profile: {
       key: string
       value: UserProfile
+    }
+    smart_schedule: {
+      key: string
+      value: PeakShavingSettings
     }
   }>(DB_NAME, DB_VERSION, {
     upgrade(db, oldVersion) {
@@ -129,6 +138,11 @@ async function getDB(): Promise<PowerFlowDB> {
       // ---- user_profile (added in v2) ----
       if (!db.objectStoreNames.contains('user_profile')) {
         db.createObjectStore('user_profile')
+      }
+
+      // ---- smart_schedule (added in v3, T10) ----
+      if (!db.objectStoreNames.contains('smart_schedule')) {
+        db.createObjectStore('smart_schedule')
       }
     },
   })
@@ -349,3 +363,68 @@ export async function clearUserProfile(): Promise<void> {
   const db = await getDB()
   await db.delete('user_profile', USER_PROFILE_KEY)
 }
+
+// ================================================================
+// T10: Smart Schedule 持久化
+// ================================================================
+
+const SCHEDULE_KEY = 'peak_shaving_settings'
+
+/** 持久化 Smart Schedule 设置 */
+export async function saveScheduleSettings(settings: PeakShavingSettings): Promise<void> {
+  const db = await getDB()
+  await db.put('smart_schedule', settings, SCHEDULE_KEY)
+}
+
+/** 读取持久化的 Smart Schedule 设置 */
+export async function loadScheduleSettings(): Promise<PeakShavingSettings | null> {
+  const db = await getDB()
+  const result = await db.get('smart_schedule', SCHEDULE_KEY)
+  return result ?? null
+}
+
+/** 清除 Smart Schedule 设置 */
+export async function clearScheduleSettings(): Promise<void> {
+  const db = await getDB()
+  await db.delete('smart_schedule', SCHEDULE_KEY)
+}
+
+// ================================================================
+// T11: 告警日志持久化增强（批量导入 + 设备ID支持）
+// ================================================================
+
+/** 批量导入来自 API 的告警列表 */
+export async function importAlertsFromAPI(alerts: Omit<AlertRecord, 'id'>[]): Promise<void> {
+  const db = await getDB()
+  const tx = db.transaction('alerts', 'readwrite')
+  for (const alert of alerts) {
+    await tx.store.add(alert as AlertRecord)
+  }
+  await tx.done
+
+  // 裁剪超出上限的旧数据
+  const count = await db.count('alerts')
+  if (count > MAX_ALERTS) {
+    const excess = count - MAX_ALERTS
+    const trimTx = db.transaction('alerts', 'readwrite')
+    let cursor = await trimTx.store.openCursor()
+    let deleted = 0
+    while (cursor && deleted < excess) {
+      await cursor.delete()
+      cursor = await cursor.continue()
+      deleted++
+    }
+    await trimTx.done
+  }
+}
+
+/** 获取指定设备的告警列表 */
+export async function getAlertsByDevice(deviceId: string, limit = 50): Promise<AlertRecord[]> {
+  const db = await getDB()
+  const all = await db.getAll('alerts')
+  return all
+    .filter(a => a.deviceId === deviceId)
+    .reverse()
+    .slice(0, limit)
+}
+
