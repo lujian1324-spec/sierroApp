@@ -10,7 +10,7 @@ import { api, tokenStore, ApiResponse } from '../utils/apiClient'
 
 export interface LoginRequest {
   /** 账号（用户名/手机/邮箱） */
-  username: string
+  account: string
   /** 密码 */
   password: string
 }
@@ -28,7 +28,7 @@ export async function loginByAccount(
   username: string,
   password: string
 ): Promise<ApiResponse<LoginData>> {
-  const payload: LoginRequest = { username, password }
+  const payload: LoginRequest = { account: username, password }
   // 登录接口不需要签名验证和 Authorization
   const result = await api.postNoSign<LoginData>('/login/account', payload)
 
