@@ -100,7 +100,12 @@ export default function LoginPage() {
                 bg-[rgba(255,59,48,0.08)] border border-[rgba(255,59,48,0.2)]"
             >
               <AlertCircle size={14} className="text-[#FF3B30] flex-shrink-0" />
-              <span className="text-[12px] text-[#FF3B30]">{error}</span>
+              <div className="text-[12px] text-[#FF3B30]">
+                <p>{error}</p>
+                {error?.includes('password') && (
+                  <p className="mt-1 text-[10px] text-[#8E8E93]">Please check your password and try again.</p>
+                )}
+              </div>
             </motion.div>
           )}
 
