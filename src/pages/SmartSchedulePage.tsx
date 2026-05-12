@@ -89,16 +89,60 @@ export default function SmartSchedulePage() {
   // T2: 编辑日程 modal 状态
   const [editingSchedule, setEditingSchedule] = useState<PeakShavingSchedule | null>(null)
   const [editForm, setEditForm] = useState<Partial<PeakShavingSchedule>>({})
+  const [editConflict, setEditConflict] = useState<{ conflict: boolean; with?: string; overlap?: string }>({ conflict: false })
+
+  // T2: 删除确认对话框状态
+  const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; scheduleId: string; scheduleName: string }>({
+    show: false,
+    scheduleId: '',
+    scheduleName: '',
+  })
 
   const openEditModal = (schedule: PeakShavingSchedule) => {
     setEditingSchedule(schedule)
     setEditForm({ ...schedule })
+    setEditConflict({ conflict: false })
   }
+
+  // 编辑表单时间变化时检测冲突
+  const handleEditFormChange = (updates: Partial<PeakShavingSchedule>) => {
+    const updated = { ...editForm, ...updates }
+    setEditForm(updated)
+    if (updates.startTime || updates.endTime) {
+      if (updated.startTime && updated.endTime) {
+        const result = checkScheduleConflict(
+          { startTime: updated.startTime, endTime: updated.endTime, id: editingSchedule?.id },
+          peakShavingSettings.schedules
+        )
+        setEditConflict(result)
+      }
+    }
+  }
+
   const handleSaveEdit = () => {
     if (editingSchedule && editForm.name && editForm.startTime && editForm.endTime) {
+      if (editConflict.conflict) return
       updatePeakShavingSchedule(editingSchedule.id, editForm)
       setEditingSchedule(null)
+      setEditConflict({ conflict: false })
     }
+  }
+
+  // T2: 带确认的删除
+  const handleDeleteClick = (schedule: PeakShavingSchedule) => {
+    setDeleteConfirm({ show: true, scheduleId: schedule.id, scheduleName: schedule.name })
+  }
+
+  const handleDeleteConfirm = () => {
+    if (deleteConfirm.scheduleId) {
+      deletePeakShavingSchedule(deleteConfirm.scheduleId)
+      setExpandedSchedule(null)
+    }
+    setDeleteConfirm({ show: false, scheduleId: '', scheduleName: '' })
+  }
+
+  const handleDeleteCancel = () => {
+    setDeleteConfirm({ show: false, scheduleId: '', scheduleName: '' })
   }
 
   // TOU 查找
@@ -175,7 +219,6 @@ export default function SmartSchedulePage() {
     }
   }
 
-  const handleDeleteSchedule = (id: string) => deletePeakShavingSchedule(id)
   const toggleScheduleEnabled = (id: string, enabled: boolean) => updatePeakShavingSchedule(id, { enabled })
 
   // 24h 时间轴数据
@@ -317,24 +360,28 @@ export default function SmartSchedulePage() {
                 const widthPct = ((endMin - startMin) / (24 * 60)) * 100
 
                 return (
-                  <motion.div
+                  <motion.button
                     key={schedule.id}
                     initial={{ opacity: 0, scaleX: 0 }}
                     animate={{ opacity: 1, scaleX: 1 }}
                     transition={{ duration: 0.4, ease: 'easeOut' }}
-                    className="absolute top-0 h-full flex items-center justify-center"
+                    onClick={() => openEditModal(schedule)}
+                    className="absolute top-0 h-full flex items-center justify-center cursor-pointer
+                      hover:opacity-100 hover:z-[5] active:scale-[1.02] transition-all duration-150"
                     style={{
                       left: `${leftPct}%`,
                       width: `${Math.max(widthPct, 2)}%`,
                       backgroundColor: config.color,
                       opacity: 0.7,
                       transformOrigin: 'left',
+                      borderRadius: '4px',
                     }}
+                    title={`${schedule.name}: ${schedule.startTime} - ${schedule.endTime}`}
                   >
-                    <span className="text-[8px] font-bold text-[#000000] truncate px-1">
+                    <span className="text-[8px] font-bold text-[#000000] truncate px-1 pointer-events-none">
                       {config.emoji} {config.label}
                     </span>
-                  </motion.div>
+                  </motion.button>
                 )
               })}
 
@@ -650,7 +697,7 @@ export default function SmartSchedulePage() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
-                              handleDeleteSchedule(schedule.id)
+                              handleDeleteClick(schedule)
                             }}
                             className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-[rgba(255,59,48,0.15)] text-[#FF3B30] text-[12px] font-medium"
                           >
@@ -911,7 +958,7 @@ export default function SmartSchedulePage() {
                   <input
                     type="text"
                     value={editForm.name || ''}
-                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                    onChange={(e) => handleEditFormChange({ name: e.target.value })}
                     className="w-full h-11 bg-[#2C2C2E] rounded-[14px] px-4 text-[14px] text-[#FFFFFF] outline-none"
                   />
                 </div>
@@ -923,7 +970,7 @@ export default function SmartSchedulePage() {
                     {Object.entries(scheduleTypeConfig).map(([type, config]) => (
                       <button
                         key={type}
-                        onClick={() => setEditForm({ ...editForm, type: type as PeakShavingSchedule['type'] })}
+                        onClick={() => handleEditFormChange({ type: type as PeakShavingSchedule['type'] })}
                         className={`flex items-center gap-2 p-3 rounded-[14px] transition-colors
                           ${editForm.type === type ? 'bg-[#2C2C2E] border border-[#01D6BE]' : 'bg-[#2C2C2E]'}`}
                       >
@@ -941,7 +988,7 @@ export default function SmartSchedulePage() {
                     <input
                       type="time"
                       value={editForm.startTime || ''}
-                      onChange={(e) => setEditForm({ ...editForm, startTime: e.target.value })}
+                      onChange={(e) => handleEditFormChange({ startTime: e.target.value })}
                       className="w-full h-11 bg-[#2C2C2E] rounded-[14px] px-4 text-[14px] text-[#FFFFFF] outline-none"
                     />
                   </div>
@@ -950,11 +997,28 @@ export default function SmartSchedulePage() {
                     <input
                       type="time"
                       value={editForm.endTime || ''}
-                      onChange={(e) => setEditForm({ ...editForm, endTime: e.target.value })}
+                      onChange={(e) => handleEditFormChange({ endTime: e.target.value })}
                       className="w-full h-11 bg-[#2C2C2E] rounded-[14px] px-4 text-[14px] text-[#FFFFFF] outline-none"
                     />
                   </div>
                 </div>
+
+                {/* T2: Edit Conflict Warning */}
+                {editConflict.conflict && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-start gap-2 p-3 bg-[rgba(255,149,0,0.1)] rounded-[12px] border border-[rgba(255,149,0,0.2)]"
+                  >
+                    <AlertTriangle size={16} className="text-[#FF9500] flex-shrink-0 mt-0.5" />
+                    <div>
+                      <div className="text-[12px] font-semibold text-[#FF9500]">Schedule Conflict</div>
+                      <div className="text-[11px] text-[#8E8E93]">
+                        Overlaps with "{editConflict.with}" ({editConflict.overlap})
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
               </div>
 
               <div className="flex gap-3 mt-6">
@@ -966,10 +1030,74 @@ export default function SmartSchedulePage() {
                 </button>
                 <button
                   onClick={handleSaveEdit}
-                  disabled={!editForm.name}
+                  disabled={!editForm.name || editConflict.conflict}
                   className="flex-1 h-11 rounded-[14px] bg-[#01D6BE] text-[#000000] text-[14px] font-semibold disabled:opacity-50"
                 >
                   Save Changes
+                </button>
+              </div>
+
+              {/* T2: Delete button in edit modal */}
+              <button
+                onClick={() => {
+                  setEditingSchedule(null)
+                  handleDeleteClick({ id: editingSchedule.id, name: editingSchedule.name } as PeakShavingSchedule)
+                }}
+                className="w-full mt-3 h-11 rounded-[14px] bg-transparent text-[#FF3B30] text-[13px] font-medium
+                  border border-[rgba(255,59,48,0.3)] flex items-center justify-center gap-2
+                  hover:bg-[rgba(255,59,48,0.08)] active:bg-[rgba(255,59,48,0.15)] transition-colors"
+              >
+                <Trash2 size={14} />
+                Delete This Schedule
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* T2: Delete Confirmation Dialog */}
+      <AnimatePresence>
+        {deleteConfirm.show && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-[rgba(0,0,0,0.8)] z-[60] flex items-center justify-center p-5"
+            onClick={handleDeleteCancel}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm bg-[#1C1C1E] rounded-[24px] p-6"
+            >
+              {/* Warning icon */}
+              <div className="flex flex-col items-center mb-5">
+                <div className="w-14 h-14 rounded-full bg-[rgba(255,59,48,0.12)] flex items-center justify-center mb-4">
+                  <AlertTriangle size={28} className="text-[#FF3B30]" />
+                </div>
+                <h3 className="text-lg font-bold text-[#FFFFFF] mb-1">Delete Schedule?</h3>
+                <p className="text-[13px] text-[#8E8E93] text-center">
+                  Are you sure you want to delete <span className="text-[#FFFFFF] font-semibold">"{deleteConfirm.scheduleName}"</span>?
+                  This action cannot be undone.
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={handleDeleteCancel}
+                  className="flex-1 h-11 rounded-[14px] bg-[#2C2C2E] text-[#FFFFFF] text-[14px] font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteConfirm}
+                  className="flex-1 h-11 rounded-[14px] bg-[#FF3B30] text-[#FFFFFF] text-[14px] font-semibold
+                    hover:opacity-90 active:opacity-80 transition-opacity"
+                >
+                  Delete
                 </button>
               </div>
             </motion.div>

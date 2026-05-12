@@ -312,7 +312,7 @@ export default function OverviewPage() {
           </div>
 
           {/* Battery / AC / Solar / Output 四卡片 - 圆环下方 */}
-          <div className="grid grid-cols-4 gap-1.5 mb-4">
+          <div className="grid grid-cols-4 gap-2.5 mb-4 px-0.5">
             {[
               { label: 'Battery', value: `${powerStation.batteryLevel}%`, icon: Battery, color: '#34C759' },
               { label: 'AC', value: '400W', icon: Zap, color: '#01D6BE' },
@@ -321,9 +321,9 @@ export default function OverviewPage() {
             ].map((item) => {
               const Icon = item.icon
               return (
-                <div key={item.label} className="bg-[#000000] rounded-[12px] p-2 flex flex-col items-center min-w-0">
+                <div key={item.label} className="bg-[#000000] rounded-[12px] p-2.5 flex flex-col items-center min-w-0">
                   <Icon size={13} className="mb-1 flex-shrink-0" style={{ color: item.color }} />
-                  <div className="text-[13px] font-bold text-[#FFFFFF] truncate w-full text-center leading-tight">{item.value}</div>
+                  <div className="text-[12px] font-bold text-[#FFFFFF] truncate w-full text-center leading-tight">{item.value}</div>
                   <div className="text-[9px] text-[#8E8E93] mt-0.5 truncate w-full text-center">{item.label}</div>
                 </div>
               )
