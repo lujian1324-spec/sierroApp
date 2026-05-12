@@ -46,7 +46,7 @@ export const useAuthStore = create<AuthState>()(
           }
 
           // 业务失败：展示后端返回的错误信息
-          const msg = result.localMessage ?? result.message ?? result.msg ?? 'Login failed'
+          const msg = result.message ?? result.msg ?? 'Login failed'
           set({ loading: false, error: msg, isAuthenticated: false })
           return false
         } catch (err: unknown) {

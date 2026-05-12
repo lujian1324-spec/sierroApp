@@ -59,6 +59,7 @@ function md5Hex(data: CryptoJS.lib.WordArray): string {
 export interface SignHeaders {
  'IOT-Open-AppID': string
  'IOT-Open-Nonce': string
+ 'IOT-Open-Body-Hash': string
  'IOT-Open-Sign': string
 }
 
@@ -74,7 +75,7 @@ export interface SignOptions {
 }
 
 /**
- * 计算签名并返回需要注入到请求头的三个字段
+ * 计算签名并返回需要注入到请求头的四个字段
  */
 export function calcSign(options: SignOptions): SignHeaders {
   const { method, urlParams = {}, body = '', nonce = generateNonce() } = options
@@ -110,6 +111,7 @@ export function calcSign(options: SignOptions): SignHeaders {
   return {
     'IOT-Open-AppID': appId,
     'IOT-Open-Nonce': nonce,
+    'IOT-Open-Body-Hash': bodyHash,
     'IOT-Open-Sign': sign,
   }
 }

@@ -1,7 +1,8 @@
 /**
  * Sierro Inc. - API 客户端
- * T12: 增加错误处理 + 指数退避重试机制
- * 自动为每个请求注入 IOT 签名头（IOT-Open-AppID / IOT-Open-Nonce / IOT-Open-Sign）
+ * 自动为每个请求注入 IOT 签名头（IOT-Open-AppID / IOT-Open-Nonce / IOT-Open-Sign / IOT-Open-Body-Hash）
+ * Token 通过 IOT-Token 请求头传输（非 Authorization Bearer）
+ * Body 使用紧凑 JSON（separators=(",", ":")）
  */
 
 import { calcSign, parseUrlParams } from './iotSign'
@@ -14,6 +15,7 @@ export interface ApiResponse<T = unknown> {
   code: number | string
   message?: string
   msg?: string
+  localMessage?: string
   data?: T
 }
 
@@ -31,11 +33,24 @@ export class ApiError extends Error {
 
 // ─── Token 存储键 ───
 const TOKEN_KEY = 'iot_access_token'
+const REFRESH_TOKEN_KEY = 'iot_refresh_token'
 
 export const tokenStore = {
   get: (): string | null => localStorage.getItem(TOKEN_KEY),
   set: (token: string) => localStorage.setItem(TOKEN_KEY, token),
-  clear: () => localStorage.removeItem(TOKEN_KEY),
+  clear: () => {
+    localStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(REFRESH_TOKEN_KEY)
+  },
+  getRefresh: (): string | null => localStorage.getItem(REFRESH_TOKEN_KEY),
+  setRefresh: (token: string) => localStorage.setItem(REFRESH_TOKEN_KEY, token),
+}
+
+/** 紧凑 JSON 序列化（无空格，与平台要求一致） */
+function compactStringify(data: unknown): string {
+  return JSON.stringify(data, (_, v) => v, 0)
+    // 紧凑：去除 key/value 间多余空格
+    // JSON.stringify 默认已无空格，但保险起见
 }
 
 // ─── 核心 request 函数 ───
@@ -44,9 +59,9 @@ export interface RequestOptions {
   method?: string
   headers?: Record<string, string>
   body?: string
-  /** 是否跳过自动添加 Authorization（登录接口） */
+  /** 是否跳过自动添加 IOT-Token（登录接口） */
   skipAuth?: boolean
-  /** 是否跳过签名头注入（登录接口不验签） */
+  /** 是否跳过签名头注入（不推荐，平台大部分接口都需验签） */
   skipSign?: boolean
   /** 最大重试次数（默认 2，网络错误时重试，业务错误不重试） */
   maxRetries?: number
@@ -91,15 +106,18 @@ export async function request<T = unknown>(
 
     // 构造请求头
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json;charset=UTF-8',
+      'Accept': 'application/json',
+      'Content-Type': 'application/json; charset=utf-8',
+      'Origin': 'https://solar.siseli.com',
+      'Referer': 'https://solar.siseli.com/',
       ...signHeaders,
       ...options.headers,
     }
 
-    // 携带 Token（登录后）
+    // 携带 Token（登录后，使用 IOT-Token 头）
     const token = tokenStore.get()
     if (token && !options.skipAuth) {
-      headers['Authorization'] = `Bearer ${token}`
+      headers['IOT-Token'] = token
     }
 
     // 拼完整 URL
@@ -124,7 +142,7 @@ export async function request<T = unknown>(
 
       const json = await resp.json() as ApiResponse<T>
 
-      // 业务错误码（code !== 0/'200'/'success'）— 不重试，直接返回让调用方处理
+      // 业务错误码（code !== 0）— 不重试，直接返回让调用方处理
       return json
     } catch (err) {
       lastError = err as Error
@@ -155,24 +173,25 @@ export const api = {
   post<T = unknown>(path: string, data?: unknown, headers?: Record<string, string>) {
     return request<T>(path, {
       method: 'POST',
-      body: data !== undefined ? JSON.stringify(data) : '',
+      body: data !== undefined ? compactStringify(data) : '',
       headers,
     })
   },
 
+  /** 带签名但不带 IOT-Token（登录接口使用） */
   postSkipAuth<T = unknown>(path: string, data?: unknown) {
     return request<T>(path, {
       method: 'POST',
-      body: data !== undefined ? JSON.stringify(data) : '',
+      body: data !== undefined ? compactStringify(data) : '',
       skipAuth: true,
     })
   },
 
-  /** 不验签、不携带 Authorization（登录接口） */
+  /** 不验签、不携带 IOT-Token（仅用于不验签的接口） */
   postNoSign<T = unknown>(path: string, data?: unknown) {
     return request<T>(path, {
       method: 'POST',
-      body: data !== undefined ? JSON.stringify(data) : '',
+      body: data !== undefined ? compactStringify(data) : '',
       skipAuth: true,
       skipSign: true,
     })
