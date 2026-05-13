@@ -115,27 +115,30 @@ async function tryLogin(account, password) {
 
 async function testLogin() {
   const account = 'jason1324'
-  // 尝试密码变体
-  const passwords = [
-    'jjww1324-LJ',
-    'jjww1324-lj',
-    'jjww1324-Lj',
-    'jjww1324',
-    'JJWW1324-LJ',
-  ]
+  // 直接测试提供的密码，并显示详细调试信息
+  const password = 'jjww1324-LJ'
 
-  console.log('=== 尝试多个密码变体 ===')
+  console.log('=== 测试登录 ===')
   console.log('Account:', account)
+  console.log('Password:', password)
+  console.log('Password length:', password.length)
+  console.log('Password chars:', [...password].map(c => c.charCodeAt(0)))
+  
+  // 直接发送请求，显示完整请求体
+  const body = JSON.stringify({ account, password })
+  console.log('Request body:', body)
+  console.log('Request body bytes:', [...new TextEncoder().encode(body)])
 
-  for (const pwd of passwords) {
-    const success = await tryLogin(account, pwd)
-    if (success) {
-      console.log(`\n✅ 登录成功！密码: ${pwd}`)
-      return
-    }
-    await new Promise(r => setTimeout(r, 300))
+  const success = await tryLogin(account, password)
+
+  if (success) {
+    console.log('\n✅ 登录成功！')
+  } else {
+    console.log('\n❌ 登录失败，请确认：')
+    console.log('1. 密码是否正确（注意大小写、特殊字符）')
+    console.log('2. 账号是否已在平台上激活')
+    console.log('3. 尝试在平台上重置密码')
   }
-  console.log('\n❌ 所有密码变体均失败，请确认正确密码。')
 }
 
 testLogin()
