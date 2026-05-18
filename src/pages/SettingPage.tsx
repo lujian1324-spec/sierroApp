@@ -1,13 +1,14 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useEffect } from 'react'
-import { 
-  Battery, 
-  Zap, 
-  Thermometer, 
+import {
+  Battery,
+  Zap,
+  Thermometer,
   RefreshCw,
   Bell,
   Download,
   AlertTriangle,
+  ChevronDown,
   ChevronRight,
   BatteryCharging,
   Link2,
@@ -29,6 +30,7 @@ import {
   Star,
   User,
   Edit3,
+  Bluetooth,
 } from 'lucide-react'
 import ToggleSwitch from '../components/ToggleSwitch'
 import { usePowerStationStore } from '../stores/powerStationStore'
@@ -45,8 +47,7 @@ export default function SettingPage() {
   const { bleConnection, serialConnection, activeDataSource, bleSupported, serialSupported } = useConnectionStore()
   const { connectBle, disconnectBle, connectSerial, disconnectSerial } = useProtocol()
   const [dbStats, setDbStats] = useState<Record<string, number> | null>(null)
-  const [showDbPanel, setShowDbPanel] = useState(false)
-  
+
   // 弹窗状态
   const [showPrivacy, setShowPrivacy] = useState(false)
   const [showTerms, setShowTerms] = useState(false)
@@ -66,11 +67,13 @@ export default function SettingPage() {
   // Reset 确认弹窗
   const [showResetConfirm, setShowResetConfirm] = useState(false)
 
-  // 分组折叠状态
+  // 分组折叠状态（true = 折叠，false/undefined = 展开）
+  // 默认所有分组展开（undefined = 展开）
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({})
   const toggleSection = (key: string) => {
     setCollapsedSections(prev => ({ ...prev, [key]: !prev[key] }))
   }
+  const isExpanded = (key: string) => !collapsedSections[key]
 
   // 个人信息编辑页面
   const [showProfileEdit, setShowProfileEdit] = useState(false)
@@ -101,10 +104,10 @@ export default function SettingPage() {
 
   // 加载 DB 统计
   useEffect(() => {
-    if (showDbPanel) {
+    if (isExpanded('database')) {
       getDBStats().then(setDbStats).catch(() => setDbStats(null))
     }
-  }, [showDbPanel])
+  }, [collapsedSections['database']])
 
   const handleBleToggle = async () => {
     if (bleConnection.status === 'connected') {
@@ -274,26 +277,31 @@ export default function SettingPage() {
           </div>
         </motion.div>
 
-        {/* IndexedDB 数据库面板 */}
+        {/* Local Database 分组 */}
         <div className="mb-4">
           <button
-            onClick={() => setShowDbPanel(v => !v)}
+            onClick={() => toggleSection('database')}
             className="w-full text-[11px] font-bold text-[#8E8E93] tracking-widest uppercase mb-2 px-1
               flex items-center justify-between"
           >
             <span className="flex items-center gap-2">
               <Database size={12} />
-              Local Database (IndexedDB)
+              Local Database
             </span>
-            <ChevronRight size={12} className={`transition-transform ${showDbPanel ? 'rotate-90' : ''}`} />
+            <ChevronDown
+              size={12}
+              className={`transition-transform duration-200 ${collapsedSections['database'] ? 'rotate-0' : 'rotate-180'}`}
+            />
           </button>
 
-          <AnimatePresence>
-            {showDbPanel && (
+          <AnimatePresence initial={false}>
+            {isExpanded('database') && (
               <motion.div
+                key="database-content"
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
                 className="overflow-hidden"
               >
                 <div className="bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] rounded-[20px] p-4 mb-3">
@@ -333,11 +341,156 @@ export default function SettingPage() {
           </AnimatePresence>
         </div>
 
-        {/* Founder Badge 区域 */}
+        {/* Connections 分组 */}
         <div className="mb-4">
-          <div className="text-[11px] font-bold text-[#8E8E93] tracking-widest uppercase mb-2 px-1">
-            Membership
-          </div>
+          <button
+            onClick={() => toggleSection('connections')}
+            className="w-full text-[11px] font-bold text-[#8E8E93] tracking-widest uppercase mb-2 px-1 flex items-center justify-between"
+          >
+            <span className="flex items-center gap-2">
+              <Bluetooth size={12} />
+              Connections
+            </span>
+            <ChevronDown
+              size={12}
+              className={`transition-transform duration-200 ${collapsedSections['connections'] ? 'rotate-0' : 'rotate-180'}`}
+            />
+          </button>
+          <AnimatePresence initial={false}>
+            {isExpanded('connections') && (
+              <motion.div
+                key="connections-content"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
+                className="overflow-hidden"
+              >
+                <div className="bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] rounded-[20px] overflow-hidden">
+                  {/* BLE */}
+                  <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[rgba(1,214,190,0.08)]">
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0
+                      ${bleConnection.status === 'connected'
+                        ? 'bg-[rgba(1,214,190,0.12)]'
+                        : 'bg-[rgba(255,255,255,0.06)]'}`}
+                    >
+                      <Bluetooth size={16} className={bleConnection.status === 'connected' ? 'text-[#01D6BE]' : 'text-[#8E8E93]'} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-[13px] font-semibold text-[#FFFFFF]">Bluetooth</div>
+                      <div className="text-[11px] text-[#8E8E93] mt-0.5">
+                        {bleSupported ? (
+                          bleConnection.status === 'connected'
+                            ? `Connected · ${bleConnection.deviceName ?? 'Device'}`
+                            : bleConnection.status === 'connecting'
+                            ? 'Connecting...'
+                            : 'Not connected'
+                        ) : 'Not supported on this browser'}
+                      </div>
+                    </div>
+                    {bleSupported && (
+                      bleConnection.status === 'connecting' ? (
+                        <Loader2 size={18} className="text-[#01D6BE] animate-spin" />
+                      ) : (
+                        <button
+                          onClick={handleBleToggle}
+                          className={`px-3 py-1.5 rounded-xl text-[11px] font-semibold transition-all active:scale-95
+                            ${bleConnection.status === 'connected'
+                              ? 'bg-[rgba(255,59,48,0.1)] text-[#FF3B30] border border-[rgba(255,59,48,0.2)]'
+                              : 'bg-[rgba(1,214,190,0.1)] text-[#01D6BE] border border-[rgba(1,214,190,0.2)]'}`}
+                        >
+                          {bleConnection.status === 'connected' ? (
+                            <span className="flex items-center gap-1.5"><Link2Off size={12} />Disconnect</span>
+                          ) : (
+                            <span className="flex items-center gap-1.5"><Link2 size={12} />Connect</span>
+                          )}
+                        </button>
+                      )
+                    )}
+                  </div>
+
+                  {/* Serial */}
+                  <div className="flex items-center gap-3 px-4 py-3.5">
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0
+                      ${serialConnection.status === 'connected'
+                        ? 'bg-[rgba(1,214,190,0.12)]'
+                        : 'bg-[rgba(255,255,255,0.06)]'}`}
+                    >
+                      <Signal size={16} className={serialConnection.status === 'connected' ? 'text-[#01D6BE]' : 'text-[#8E8E93]'} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-[13px] font-semibold text-[#FFFFFF]">USB Serial</div>
+                      <div className="text-[11px] text-[#8E8E93] mt-0.5">
+                        {serialSupported ? (
+                          serialConnection.status === 'connected'
+                            ? `Connected · ${serialConnection.deviceName ?? 'Port'}`
+                            : serialConnection.status === 'connecting'
+                            ? 'Connecting...'
+                            : 'Not connected'
+                        ) : 'Not supported on this browser'}
+                      </div>
+                    </div>
+                    {serialSupported && (
+                      serialConnection.status === 'connecting' ? (
+                        <Loader2 size={18} className="text-[#01D6BE] animate-spin" />
+                      ) : (
+                        <button
+                          onClick={handleSerialToggle}
+                          className={`px-3 py-1.5 rounded-xl text-[11px] font-semibold transition-all active:scale-95
+                            ${serialConnection.status === 'connected'
+                              ? 'bg-[rgba(255,59,48,0.1)] text-[#FF3B30] border border-[rgba(255,59,48,0.2)]'
+                              : 'bg-[rgba(1,214,190,0.1)] text-[#01D6BE] border border-[rgba(1,214,190,0.2)]'}`}
+                        >
+                          {serialConnection.status === 'connected' ? (
+                            <span className="flex items-center gap-1.5"><Link2Off size={12} />Disconnect</span>
+                          ) : (
+                            <span className="flex items-center gap-1.5"><Link2 size={12} />Connect</span>
+                          )}
+                        </button>
+                      )
+                    )}
+                  </div>
+
+                  {/* 当前数据源 */}
+                  {activeDataSource && (
+                    <div className="px-4 py-2 border-t border-[rgba(1,214,190,0.06)] bg-[rgba(1,214,190,0.03)]">
+                      <div className="text-[10px] text-[#48484A]">
+                        Active data source: <span className="text-[#01D6BE]">{activeDataSource === 'bluetooth' ? 'Bluetooth' : activeDataSource === 'serial' ? 'USB Serial' : 'Simulator'}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Membership 分组 */}
+        <div className="mb-4">
+          <button
+            onClick={() => toggleSection('membership')}
+            className="w-full text-[11px] font-bold text-[#8E8E93] tracking-widest uppercase mb-2 px-1 flex items-center justify-between"
+          >
+            <span className="flex items-center gap-2">
+              <Crown size={12} />
+              Membership
+            </span>
+            <ChevronDown
+              size={12}
+              className={`transition-transform duration-200 ${collapsedSections['membership'] ? 'rotate-0' : 'rotate-180'}`}
+            />
+          </button>
+          <AnimatePresence initial={false}>
+          {isExpanded('membership') && (
+            <motion.div
+              key="membership-content"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="overflow-hidden"
+            >
+          
           {settings.founderBadge ? (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -396,22 +549,25 @@ export default function SettingPage() {
               <ChevronRight size={16} className="text-[#48484A]" />
             </div>
           )}
+          </motion.div>
+          )}
+          </AnimatePresence>
         </div>
 
-        {/* 系统设置 */}
+        {/* System 分组 */}
         <div className="mb-4">
           <button
             onClick={() => toggleSection('system')}
             className="w-full text-[11px] font-bold text-[#8E8E93] tracking-widest uppercase mb-2 px-1 flex items-center justify-between"
           >
             <span>System</span>
-            <ChevronRight
+            <ChevronDown
               size={12}
-              className={`transition-transform duration-200 ${collapsedSections['system'] ? '' : 'rotate-90'}`}
+              className={`transition-transform duration-200 ${collapsedSections['system'] ? 'rotate-0' : 'rotate-180'}`}
             />
           </button>
           <AnimatePresence initial={false}>
-            {!collapsedSections['system'] && (
+            {isExpanded('system') && (
               <motion.div
                 key="system-content"
                 initial={{ opacity: 0, height: 0 }}
