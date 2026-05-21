@@ -1,61 +1,81 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Sun, Zap, Globe, Share2, BarChart3, WifiOff, Clock } from 'lucide-react'
+import { Share2, BarChart3, WifiOff, Leaf } from 'lucide-react'
 import BatteryRing from '../components/BatteryRing'
 import { usePowerStationStore } from '../stores/powerStationStore'
 
-const periods = ['Day', 'Week', 'Month'] as const
+const periods = ['Day', 'Week', 'Month', 'Range'] as const
 type Period = typeof periods[number]
 
+// Mock data
 const allData = {
-  Day: { charge: [0, 0, 12, 30, 55, 70, 48], discharge: [0, 0, 8,  20, 38, 52, 30] },
-  Week:  { charge: [55, 70, 48, 78, 62, 40, 28], discharge: [38, 52, 60, 42, 56, 72, 30] },
-  Month: { charge: [60, 50, 75, 65, 80, 55, 45], discharge: [45, 40, 65, 55, 70, 48, 35] },
+  Day: {
+    input: [0, 5, 12, 30, 55, 70, 48, 60, 45, 30, 20, 15],
+    output: [0, 3, 8, 20, 38, 52, 30, 42, 35, 25, 18, 10],
+    labels: ['12am', '2am', '4am', '6am', '8am', '10am', '12pm', '2pm', '4pm', '6pm', '8pm', '10pm'],
+    co2: '6.4',
+    days: 128,
+    insight: 'Input remained consistent today',
+    ecoInsight: 'Saved enough energy to power a laptop for 32 hrs',
+  },
+  Week: {
+    input: [55, 70, 48, 78, 62, 40, 28],
+    output: [38, 52, 60, 42, 56, 72, 30],
+    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    co2: '14.2',
+    days: 128,
+    insight: 'Highest usage recorded on Wednesday',
+    ecoInsight: 'Equal to planting 2 trees',
+  },
+  Month: {
+    input: [60, 50, 75, 65, 80, 55, 45, 70, 58, 62, 48, 72],
+    output: [45, 40, 65, 55, 70, 48, 35, 58, 42, 50, 38, 60],
+    labels: ['Mar', 'Apr 1', 'Apr 8', 'Apr 15', 'Apr 22', 'May', 'May 8', 'May 15', 'May 22', 'May 28', 'Jun 4', 'Jun 11'],
+    co2: '32.5',
+    days: 128,
+    insight: 'Output peaked during the first week',
+    ecoInsight: 'Equivalent to driving 180 fewer miles',
+  },
+  Range: {
+    input: [60, 50, 75, 65, 80, 55, 45, 70, 58, 62, 48, 72],
+    output: [45, 40, 65, 55, 70, 48, 35, 58, 42, 50, 38, 60],
+    labels: ['Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb'],
+    co2: '102.6',
+    days: 128,
+    insight: 'Sustained energy performance across the selected period',
+    ecoInsight: 'Equivalent to driving 560 fewer miles',
+  },
 }
-
-const dayLabels = {
-  Day: ['0h', '4h', '8h', '12h', '16h', '20h', '24h'],
-  Week:  ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-  Month: ['W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7'],
-}
-
-// 统一主题颜色
-const themeColor = '#01D6BE'
 
 export default function StatsPage() {
-  const [period, setPeriod] = useState<Period>('Week')
+  const [period, setPeriod] = useState<Period>('Day')
   const { powerStation } = usePowerStationStore()
 
   const currentData = allData[period]
-  const days = dayLabels[period]
-
-  // 无设备/离线时显示 Empty State（整页）
   const hasData = powerStation.batteryLevel > 0 || powerStation.cycleCount > 0
+  const isWeek = period === 'Week'
 
-  // 图表数据检测：所有值均为0时视为无历史数据
-  const hasChartData = currentData.charge.some(v => v > 0) || currentData.discharge.some(v => v > 0)
+  // Generate SVG path for area chart
+  const generateAreaPath = (data: number[], width: number, height: number) => {
+    const max = Math.max(...data, 1)
+    const padding = 4
+    const usableWidth = width - padding * 2
+    const usableHeight = height - padding * 2
 
-  // ── 图表区域空状态组件 ────────────────────────────────────
-  const ChartEmptyState = ({ title, hint }: { title: string; hint: string }) => (
-    <div className="bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] rounded-[20px] p-4 mb-4">
-      <div className="text-sm font-bold text-[#FFFFFF] mb-4">{title}</div>
-      <div className="flex flex-col items-center justify-center py-10">
-        <div className="w-14 h-14 rounded-2xl bg-[rgba(255,255,255,0.04)] flex items-center justify-center mb-3">
-          <Clock size={24} className="text-[#48484A]" />
-        </div>
-        <p className="text-[13px] text-[#8E8E93] text-center mb-1">No history data yet</p>
-        <p className="text-[11px] text-[#48484A] text-center">{hint}</p>
-      </div>
-    </div>
-  )
+    const points = data.map((val, i) => ({
+      x: padding + (i / (data.length - 1)) * usableWidth,
+      y: padding + usableHeight - (val / max) * usableHeight,
+    }))
 
-  // ── Empty State ──────────────────────────────────────────
+    const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
+    const areaPath = `${linePath} L ${points[points.length - 1].x} ${height} L ${points[0].x} ${height} Z`
+
+    return { linePath, areaPath }
+  }
+
   const emptyState = !hasData ? (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col items-center justify-center py-20 px-8"
-    >
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+      className="flex flex-col items-center justify-center py-20 px-8">
       <div className="w-16 h-16 rounded-2xl bg-[#1C1C1E] flex items-center justify-center mb-4">
         <BarChart3 size={32} className="text-[#48484A]" />
       </div>
@@ -76,38 +96,24 @@ export default function StatsPage() {
       <div className="px-5 pt-8 pb-2 safe-area-top flex justify-between items-start">
         <div>
           <h2 className="text-xl font-bold text-[#FFFFFF]">Energy Stats</h2>
-          <p className="text-xs text-[#8E8E93] mt-1">This Week · March 2026</p>
+          <p className="text-xs text-[#8E8E93] mt-1">
+            {currentData.days} Days · Reliable backup power since Jan 2026
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          <button 
-            className="w-9 h-9 flex items-center justify-center rounded-full bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] text-[#8E8E93] hover:text-[#01D6BE] transition-colors"
+          <button className="w-9 h-9 flex items-center justify-center rounded-full bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] text-[#8E8E93] hover:text-[#01D6BE] transition-colors"
             onClick={() => {
               if (navigator.share) {
-                navigator.share({
-                  title: 'PowerFlow Energy Stats',
-                  text: `Total Output: 9.4 kWh · CO₂ Reduced: 6.4 kg`,
-                  url: window.location.href,
-                })
-              } else {
-                alert('Share feature not available')
+                navigator.share({ title: 'Sierro Energy Stats', text: `CO2 Reduced: ${currentData.co2} kg`, url: window.location.href })
               }
-            }}
-          >
+            }}>
             <Share2 size={18} />
           </button>
           <div className="flex bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] rounded-full p-1">
             {periods.map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={`
-                  text-[11px] font-semibold px-3 py-1 rounded-full transition-all duration-200
-                  ${period === p 
-                    ? 'bg-[#01D6BE] text-[#000000]' 
-                    : 'text-[#8E8E93] hover:text-[#FFFFFF]'
-                  }
-                `}
-              >
+              <button key={p} onClick={() => setPeriod(p)}
+                className={`text-[10px] font-semibold px-2.5 py-1 rounded-full transition-all duration-200
+                  ${period === p ? 'bg-[#01D6BE] text-[#000000]' : 'text-[#8E8E93] hover:text-[#FFFFFF]'}`}>
                 {p}
               </button>
             ))}
@@ -115,147 +121,142 @@ export default function StatsPage() {
         </div>
       </div>
 
-      {/* 可滚动内容 */}
+      {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto scrollbar-hide px-5 pb-4">
-        {/* Empty State（无设备） */}
         {emptyState}
 
-        {/* 以下内容仅在有数据时显示 */}
         {hasData && (<>
-          {/* 概览卡片 */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="grid grid-cols-2 gap-2.5 mb-4"
-          >
-            {[
-              { icon: Zap, value: '9.4', unit: 'kWh', label: 'Total Output', trend: '↓ 5%', trendUp: false },
-              { icon: Globe, value: '6.4', unit: 'kg', label: 'CO₂ Reduced', trend: '↑ 18%', trendUp: true },
-            ].map((stat, i) => {
-              const Icon = stat.icon
-              return (
-                <div
-                  key={i}
-                  className="bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] rounded-[20px] p-4 relative overflow-hidden"
-                >
-                  <div
-                    className="absolute top-0 left-0 right-0 h-0.5"
-                    style={{ backgroundColor: themeColor }}
-                  />
-                  <Icon size={18} className="mb-2" style={{ color: themeColor }} />
-                  <div className="text-[22px] font-extrabold text-[#FFFFFF] tracking-tight">
-                    {stat.value}<small className="text-xs font-normal text-[#8E8E93]">{stat.unit}</small>
-                  </div>
-                  <div className="text-[11px] text-[#8E8E93] mt-1">{stat.label}</div>
-                  <div className={`text-[10px] mt-1 ${stat.trendUp ? 'text-[#34C759]' : 'text-[#FF3B30]'}`}>
-                    {stat.trend} vs Last Week
-                  </div>
-                </div>
-              )
-            })}
+          {/* CO2 Card */}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+            className="bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] rounded-[20px] p-5 mb-4 relative overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-px bg-[rgba(1,214,190,0.15)]" />
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-[rgba(52,199,89,0.1)] flex items-center justify-center">
+                <Leaf size={16} className="text-[#34C759]" />
+              </div>
+              <span className="text-[13px] font-semibold text-[#FFFFFF]">CO2 Reduced</span>
+            </div>
+            <div className="flex items-baseline gap-1 mb-1">
+              <span className="text-[36px] font-extrabold text-[#34C759] leading-none">{currentData.co2}</span>
+              <span className="text-[14px] text-[#8E8E93]">Kg</span>
+            </div>
+            <p className="text-[12px] text-[#8E8E93]">{currentData.ecoInsight}</p>
           </motion.div>
 
-          {/* 柱状图（有数据时） */}
-          {hasChartData ? (
-            <div className="bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] rounded-[20px] p-4 mb-4">
-              <div className="flex justify-between items-center mb-4">
-                <div className="text-sm font-bold text-[#FFFFFF]">Weekly Charge / Discharge</div>
-                <div className="flex gap-3">
-                  <div className="flex items-center gap-1.5 text-[10px] text-[#8E8E93]">
-                    <div className="w-2 h-2 rounded-full bg-[#01D6BE]" />
-                    <span>Charge</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-[10px] text-[#8E8E93]">
-                    <div className="w-2 h-2 rounded-full bg-[#01A88F]" />
-                    <span>Usage</span>
-                  </div>
+          {/* Input vs Output Chart */}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+            className="bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] rounded-[20px] p-4 mb-4">
+            <div className="flex justify-between items-center mb-4">
+              <div className="text-sm font-bold text-[#FFFFFF]">Input vs Output</div>
+              <div className="flex gap-3">
+                <div className="flex items-center gap-1.5 text-[10px] text-[#8E8E93]">
+                  <div className="w-2 h-2 rounded-full bg-[#01D6BE]" /><span>Input</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[10px] text-[#8E8E93]">
+                  <div className="w-2 h-2 rounded-full bg-[#01A88F]" /><span>Output</span>
                 </div>
               </div>
-              
-              {/* 柱子 */}
-              <div className="flex items-end gap-1.5 h-[140px]">
-                {currentData.charge.map((charge, i) => (
-                  <div key={i} className="flex-1 flex items-end gap-0.5 h-full relative">
-                    <div 
-                      className="flex-1 rounded-t bg-[#01D6BE] min-h-[4px]"
-                      style={{ height: `${charge}%` }}
-                    />
-                    <div 
-                      className="flex-1 rounded-t bg-[#01A88F] min-h-[4px]"
-                      style={{ height: `${currentData.discharge[i]}%` }}
-                    />
-                  </div>
-                ))}
-              </div>
-              {/* 分隔线 */}
-              <div className="h-px bg-[rgba(1,214,190,0.08)] my-1.5" />
-              {/* X 轴标签 */}
-              <div className="flex gap-1.5">
-                {days.map((day) => (
-                  <div key={day} className="flex-1 text-center text-[9px] text-[#48484A]">{day}</div>
-                ))}
-              </div>
             </div>
-          ) : (
-            <ChartEmptyState 
-              title="Weekly Charge / Discharge" 
-              hint="Data will appear after 24 hours of usage" 
-            />
-          )}
 
-          {/* 电池容量（有数据时） */}
+            {isWeek ? (
+              /* Week: Dual Bar Chart */
+              <div>
+                <div className="flex items-end gap-2 h-[140px]">
+                  {currentData.input.map((input, i) => {
+                    const maxVal = Math.max(...currentData.input, ...currentData.output, 1)
+                    return (
+                      <div key={i} className="flex-1 flex items-end gap-0.5 h-full">
+                        <div className="flex-1 rounded-t bg-[#01D6BE] min-h-[2px] transition-all duration-500"
+                          style={{ height: `${(input / maxVal) * 100}%` }} />
+                        <div className="flex-1 rounded-t bg-[#01A88F] min-h-[2px] transition-all duration-500"
+                          style={{ height: `${(currentData.output[i] / maxVal) * 100}%` }} />
+                      </div>
+                    )
+                  })}
+                </div>
+                <div className="h-px bg-[rgba(1,214,190,0.08)] my-1.5" />
+                <div className="flex gap-2">
+                  {currentData.labels.map((day) => (
+                    <div key={day} className="flex-1 text-center text-[9px] text-[#48484A]">{day}</div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              /* Day/Month/Range: Line + Area Chart */
+              <div>
+                <svg viewBox="0 0 340 160" className="w-full h-[140px]">
+                  {/* Input Area */}
+                  {(() => {
+                    const { linePath, areaPath } = generateAreaPath(currentData.input, 340, 140)
+                    return (
+                      <g>
+                        <path d={areaPath} fill="rgba(1,214,190,0.1)" />
+                        <path d={linePath} fill="none" stroke="#01D6BE" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </g>
+                    )
+                  })()}
+                  {/* Output Area */}
+                  {(() => {
+                    const { linePath, areaPath } = generateAreaPath(currentData.output, 340, 140)
+                    return (
+                      <g>
+                        <path d={areaPath} fill="rgba(1,168,143,0.08)" />
+                        <path d={linePath} fill="none" stroke="#01A88F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </g>
+                    )
+                  })()}
+                </svg>
+                <div className="flex justify-between px-1">
+                  {currentData.labels.filter((_, i) => i % Math.max(1, Math.floor(currentData.labels.length / 6)) === 0).map((label) => (
+                    <span key={label} className="text-[9px] text-[#48484A]">{label}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* AI Insight */}
+            <div className="mt-4 pt-3 border-t border-[rgba(1,214,190,0.06)]">
+              <p className="text-[11px] text-[#8E8E93]">
+                <span className="text-[#01D6BE] font-semibold">Insight: </span>
+                {currentData.insight}
+              </p>
+            </div>
+          </motion.div>
+
+          {/* Battery Health Card */}
           {hasData && (
-            <div className="bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] rounded-[20px] p-4 mb-4">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+              className="bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] rounded-[20px] p-4">
               <div className="flex justify-between items-center mb-3">
-                <div className="text-sm font-bold text-[#FFFFFF]">Battery Capacity</div>
-                <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full 
-                  bg-[rgba(52,199,89,0.12)] text-[#34C759] border border-[rgba(52,199,89,0.25)]
-                  text-[10px] font-semibold">
+                <div className="text-sm font-bold text-[#FFFFFF]">Battery Health</div>
+                <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[rgba(52,199,89,0.12)] text-[#34C759] border border-[rgba(52,199,89,0.25)] text-[10px] font-semibold">
                   Good
                 </div>
               </div>
-
               <div className="flex items-center gap-6">
-                {/* 储能容量环形 */}
                 <div className="flex-shrink-0">
-                  <BatteryRing 
-                    percentage={powerStation.batteryLevel} 
-                    size={180} 
-                    strokeWidth={20}
-                    isCharging={powerStation.isCharging}
-                    uid="stats-page"
-                  />
+                  <BatteryRing percentage={powerStation.batteryLevel} size={160} strokeWidth={18} isCharging={powerStation.isCharging} uid="stats-page" />
                 </div>
-
-                {/* 右侧统计 */}
                 <div className="flex-1 grid grid-cols-2 gap-3">
                   <div className="text-center bg-[rgba(255,255,255,0.03)] rounded-[12px] p-2.5">
-                    <div className="text-[14px] font-bold text-[#FFFFFF]">
-                      {powerStation.batteryHealth}%
-                    </div>
+                    <div className="text-[14px] font-bold text-[#FFFFFF]">{powerStation.batteryHealth}%</div>
                     <div className="text-[9px] text-[#8E8E93] mt-0.5">Health</div>
                   </div>
                   <div className="text-center bg-[rgba(255,255,255,0.03)] rounded-[12px] p-2.5">
-                    <div className="text-[14px] font-bold text-[#34C759]">
-                      {powerStation.temperature}°C
-                    </div>
+                    <div className="text-[14px] font-bold text-[#34C759]">{powerStation.temperature}°C</div>
                     <div className="text-[9px] text-[#8E8E93] mt-0.5">Temp</div>
                   </div>
                   <div className="text-center bg-[rgba(255,255,255,0.03)] rounded-[12px] p-2.5">
-                    <div className="text-[14px] font-bold text-[#01D6BE]">
-                      {powerStation.cycleCount}
-                    </div>
+                    <div className="text-[14px] font-bold text-[#01D6BE]">{powerStation.cycleCount}</div>
                     <div className="text-[9px] text-[#8E8E93] mt-0.5">Cycles</div>
                   </div>
                   <div className="text-center bg-[rgba(255,255,255,0.03)] rounded-[12px] p-2.5">
-                    <div className="text-[14px] font-bold text-[#FF9500]">
-                      1000Wh
-                    </div>
+                    <div className="text-[14px] font-bold text-[#FF9500]">1000Wh</div>
                     <div className="text-[9px] text-[#8E8E93] mt-0.5">Capacity</div>
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           )}
         </>)}
       </div>

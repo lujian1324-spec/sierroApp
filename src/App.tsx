@@ -9,6 +9,7 @@ import SettingPage from './pages/SettingPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import SmartSchedulePage from './pages/SmartSchedulePage'
+import NotificationsPage from './pages/NotificationsPage'
 import { useRealtimeSimulator } from './hooks/useRealtimeSimulator'
 import { useAuthStore } from './stores/authStore'
 import { ToastContainer, useToast } from './components/Toast'
@@ -22,10 +23,9 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
-function App() {
+function AppInner() {
   const location = useLocation()
   const isAuthenticated = useAuthStore(s => s.isAuthenticated)
-  const { toasts, dismiss } = useToast()
   useRealtimeSimulator()
 
   // 登录/注册页单独渲染，不包含底部导航
@@ -55,7 +55,7 @@ function App() {
   }
 
   // 设备详情页 & Smart Schedule 页单独渲染，不包含底部导航
-  if (location.pathname.startsWith('/device/') || location.pathname === '/smart-schedule') {
+  if (location.pathname.startsWith('/device/') || location.pathname === '/smart-schedule' || location.pathname === '/notifications') {
     return (
       <div className="h-full w-full bg-bg-base flex flex-col overflow-hidden">
         <div className="flex-1 overflow-hidden relative">
@@ -71,6 +71,7 @@ function App() {
               <Routes location={location}>
                 <Route path="/device/:id" element={<RequireAuth><OverviewPage /></RequireAuth>} />
                 <Route path="/smart-schedule" element={<RequireAuth><SmartSchedulePage /></RequireAuth>} />
+                <Route path="/notifications" element={<RequireAuth><NotificationsPage /></RequireAuth>} />
               </Routes>
             </motion.div>
           </AnimatePresence>
@@ -81,8 +82,6 @@ function App() {
 
   return (
     <div className="h-full w-full bg-bg-base flex flex-col overflow-hidden">
-      {/* Toast 全局通知层 */}
-      <ToastContainer toasts={toasts} onDismiss={dismiss} />
       {/* 主内容区域 */}
       <div className="flex-1 overflow-hidden relative">
         <AnimatePresence mode="wait">
@@ -108,6 +107,22 @@ function App() {
       {/* 底部导航 */}
       <BottomNavigation />
     </div>
+  )
+}
+
+/**
+ * App 根组件：在最外层挂载全局 Toast 容器
+ * 确保所有路由（登录页、设备详情页、主页）均可触发 toast 通知
+ */
+function App() {
+  const { toasts, dismiss } = useToast()
+
+  return (
+    <>
+      {/* 全局 Toast 通知层 — 覆盖所有路由，z-index: 200 */}
+      <ToastContainer toasts={toasts} onDismiss={dismiss} />
+      <AppInner />
+    </>
   )
 }
 

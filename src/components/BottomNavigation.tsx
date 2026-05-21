@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 
 const navItems = [
-  { path: '/', label: 'Home', icon: Home },
+  { path: '/', label: 'Devices', icon: Home },
   { path: '/stats', label: 'Stats', icon: BarChart3 },
   { path: '/settings', label: 'Settings', icon: Settings },
 ]

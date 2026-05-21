@@ -319,6 +319,60 @@ export async function getCommandLogs(limit = 30): Promise<CommandRecord[]> {
 }
 
 // ================================================================
+// T9: 历史功率数据存储模型 — 时间滚动清理（30天保留）
+// ================================================================
+
+const POWER_HISTORY_RETENTION_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
+
+/**
+ * 清理超期功率历史数据（保留最近 30 天）
+ * 建议在 App 启动时或每小时定时调用
+ */
+export async function clearOldPowerHistory(): Promise<number> {
+  const db = await getDB()
+  const cutoff = Date.now() - POWER_HISTORY_RETENTION_MS
+
+  const tx = db.transaction('power_history', 'readwrite')
+  const index = tx.store.index('timestamp')
+  const range = IDBKeyRange.upperBound(cutoff)
+
+  let cursor = await index.openCursor(range)
+  let deleted = 0
+  while (cursor) {
+    await cursor.delete()
+    deleted++
+    cursor = await cursor.continue()
+  }
+  await tx.done
+
+  return deleted
+}
+
+/**
+ * 清理超期告警数据（保留最近 60 天）
+ */
+export async function clearOldAlerts(): Promise<number> {
+  const ALERT_RETENTION_MS = 60 * 24 * 60 * 60 * 1000 // 60 days
+  const db = await getDB()
+  const cutoff = Date.now() - ALERT_RETENTION_MS
+
+  const tx = db.transaction('alerts', 'readwrite')
+  const index = tx.store.index('timestamp')
+  const range = IDBKeyRange.upperBound(cutoff)
+
+  let cursor = await index.openCursor(range)
+  let deleted = 0
+  while (cursor) {
+    await cursor.delete()
+    deleted++
+    cursor = await cursor.continue()
+  }
+  await tx.done
+
+  return deleted
+}
+
+// ================================================================
 // 数据库工具
 // ================================================================
 

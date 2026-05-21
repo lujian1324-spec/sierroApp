@@ -323,6 +323,11 @@ export default function OverviewPage() {
             />
           </div>
 
+          {/* 剩余时间 */}
+          <div className="text-center mb-4">
+            <span className="text-[12px] text-[#8E8E93]">1h 24m remaining</span>
+          </div>
+
           {/* Battery / AC / Solar / Output 四卡片 - 圆环下方 */}
           <div className="grid grid-cols-4 gap-2.5 mb-4 px-0.5">
             {[

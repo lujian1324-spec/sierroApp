@@ -1,25 +1,113 @@
-// 设备类型
-export interface Device {
-  id: string;
-  name: string;
-  type: 'cpap' | 'fridge' | 'powerstation' | 'laptop' | 'phone' | 'lighting' | 'other';
-  status: 'online' | 'offline';
-  batteryLevel: number;
-  isOn: boolean;
-  power?: number;
-  // T7: API 字段扩展
-  deviceId?: string;       // 云端设备 ID（from /device/list）
-  firmwareVersion?: string;
-  lastSeen?: number;       // Unix timestamp
-  soc?: number;            // 精确 SOC（来自实时状态）
-  acPower?: number;        // AC 功率 W
-  solarPower?: number;     // 光伏功率 W
-  outputPower?: number;    // 输出功率 W
-  batteryTemp?: number;    // 电池温度 °C
-  workMode?: 0 | 1 | 2;   // 0=正常 1=备份 2=节能
+// ═══════════════════════════════════════════════════════════════
+// T7: API 实时状态 — 对齐 /remote/device/state/latest 返回格式
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * 设备实时状态字段（来自 /remote/device/state/latest → fields[key]）
+ * 与 API 的 DeviceStateField.key 完全对齐
+ */
+export interface DeviceRealtimeFields {
+  /** 电池 SOC 百分比 (0-100) */
+  soc: number
+  /** 电池功率 W（充电正，放电负） */
+  batteryPower: number
+  /** AC 功率 W（输入/输出） */
+  acPower: number
+  /** 光伏输入功率 W */
+  solarPower: number
+  /** 总输出功率 W */
+  outputPower: number
+  /** 电池温度 °C */
+  batteryTemp: number
+  /** AC 输出 1 使能 */
+  acOut1Enable: boolean
+  /** AC 输出 2 使能 */
+  acOut2Enable: boolean
+  /** USB 输出 1 使能 */
+  usbOut1Enable: boolean
+  /** 睡眠模式 */
+  sleepMode: boolean
+  /** 工作模式: 0=正常 1=备份 2=节能 */
+  workMode: 0 | 1 | 2
 }
 
-// 端口类型
+/** 设备告警（来自 firingAlarms） */
+export interface DeviceAlert {
+  alarmId: string
+  alarmCode: string
+  alarmMessage: string
+  severity: 'critical' | 'major' | 'minor' | 'info'
+  timestamp: string
+  isProcessed?: boolean
+}
+
+// ─── 设备类型（统一 UI + API） ───
+
+/**
+ * 设备类型（混合本地 UI 字段 + 云端 API 字段）
+ * - UI 本地字段：id, name, type, status, batteryLevel, isOn, power
+ * - API 实时字段：deviceId, firmwareVersion, lastSeen, soc, acPower, solarPower...
+ * - API 设备元数据：serialNumber, model, stationId, isOnline, isAlarmed
+ */
+export interface Device {
+  /** 本地设备 ID（与 deviceId 对应） */
+  id: string
+  name: string
+  type: 'cpap' | 'fridge' | 'powerstation' | 'laptop' | 'phone' | 'lighting' | 'other'
+  status: 'online' | 'offline'
+  /** 本地显示用电量百分比（可由 soc 驱动） */
+  batteryLevel: number
+  /** 本地开关状态（可由 acOut1Enable 等驱动） */
+  isOn: boolean
+  /** 本地功率显示 W（可由 outputPower 驱动） */
+  power?: number
+
+  // ── API 设备元数据（来自 /device/list → DeviceListItem） ──
+  /** 云端设备 ID（与 id 对应）；本地 mock 设备可无此字段 */
+  deviceId?: string
+  /** 设备序列号 */
+  serialNumber?: string
+  /** 设备型号 */
+  model?: string
+  /** 固件版本 */
+  firmwareVersion?: string
+  /** 所属电站 ID */
+  stationId?: number
+  /** 是否在线（对应 isOnline） */
+  isOnline?: boolean
+  /** 是否有告警（对应 isAlarmed） */
+  isAlarmed?: boolean
+  /** 是否已置顶 */
+  isPinned?: boolean
+  /** 最后在线时间（Unix ms） */
+  lastOnlineAt?: number
+
+  // ── API 实时状态字段（来自 /remote/device/state/latest） ──
+  /** 精确 SOC 百分比 (0-100)，覆盖 batteryLevel */
+  soc?: number
+  /** 电池功率 W（充电正，放电负） */
+  batteryPower?: number
+  /** AC 功率 W */
+  acPower?: number
+  /** 光伏功率 W */
+  solarPower?: number
+  /** 总输出功率 W，覆盖 power */
+  outputPower?: number
+  /** 电池温度 °C */
+  batteryTemp?: number
+  /** AC 输出 1 使能，覆盖 isOn */
+  acOut1Enable?: boolean
+  /** AC 输出 2 使能 */
+  acOut2Enable?: boolean
+  /** USB 输出 1 使能 */
+  usbOut1Enable?: boolean
+  /** 睡眠模式 */
+  sleepMode?: boolean
+  /** 工作模式: 0=正常 1=备份 2=节能 */
+  workMode?: 0 | 1 | 2
+}
+
+// ─── 端口类型 ───
 export interface Port {
   id: string;
   name: string;

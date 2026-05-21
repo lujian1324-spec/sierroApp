@@ -1,6 +1,6 @@
 ﻿import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { PowerStation, OperatingMode, Device, AppSettings, PeakShavingSettings, PeakShavingStatus, TOURateInfo } from '../types'
+import type { PowerStation, OperatingMode, Device, AppSettings, PeakShavingSettings, PeakShavingStatus, TOURateInfo, DeviceRealtimeFields } from '../types'
 
 interface PowerStationState {
   // 电源站数据
@@ -28,6 +28,13 @@ interface PowerStationState {
   selectDevice: (deviceId: string) => void;
   updateDeviceNameById: (deviceId: string, name: string) => void;
   updateDeviceSpecs: (specs: Partial<PowerStation['specs']>) => void;
+
+  // ── T7: API 实时状态更新 ──
+  /**
+   * 更新指定设备的实时状态（对齐 /remote/device/state/latest 字段）
+   * 自动驱动本地 UI 字段：batteryLevel ← soc, isOn ← acOut1Enable, power ← outputPower
+   */
+  updateDeviceRealtime: (deviceId: string, fields: Partial<DeviceRealtimeFields>) => void;
   
   // 削峰填谷动作
   updatePeakShavingSettings: (settings: Partial<PeakShavingSettings>) => void;
@@ -376,6 +383,28 @@ updateDeviceSpecs: (specs) => {
       specs: { ...state.powerStation.specs, ...specs }
     }
   }));
+},
+
+// ── T7: API 实时状态更新 ──
+updateDeviceRealtime: (deviceId, fields) => {
+  set((state) => {
+    const device = state.devices.find(d => d.id === deviceId || d.deviceId === deviceId)
+    if (!device) return state
+
+    // 驱动 UI 字段：soc → batteryLevel, outputPower → power, acOut1Enable → isOn
+    const uiUpdates: Partial<Device> = {}
+    if (fields.soc !== undefined) uiUpdates.batteryLevel = fields.soc
+    if (fields.outputPower !== undefined) uiUpdates.power = fields.outputPower
+    if (fields.acOut1Enable !== undefined) uiUpdates.isOn = fields.acOut1Enable
+
+    return {
+      devices: state.devices.map(d =>
+        (d.id === deviceId || d.deviceId === deviceId)
+          ? { ...d, ...fields, ...uiUpdates, status: d.status } // 保留本地 status
+          : d
+      ),
+    }
+  })
 },
 
 toggleDevices: (deviceIds: string[], isOn: boolean) => {

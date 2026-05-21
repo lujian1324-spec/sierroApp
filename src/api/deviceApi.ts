@@ -172,7 +172,7 @@ export interface PinDeviceRequest {
   ids: number[]
 }
 
-// ─── 设备实时状态 ───
+// ─── 设备实时状态（API 原始格式） ───
 
 export interface DeviceStateField {
   key: string
@@ -208,6 +208,59 @@ export interface DeviceStateResponse {
     severity: string
     timestamp: string
   }>
+}
+
+// ─── API 字段 → Device 实时状态映射类型 ───
+import type { DeviceRealtimeFields, DeviceAlert } from '../types'
+
+/** 将 API fields Record<string, DeviceStateField> 映射为 DeviceRealtimeFields */
+export function mapFieldsToRealtime(
+  fields: Record<string, DeviceStateField>
+): Partial<DeviceRealtimeFields> {
+  const getNum = (key: string): number | undefined => {
+    const f = fields[key]
+    if (!f) return undefined
+    const v = Number(f.value)
+    return isNaN(v) ? undefined : v
+  }
+  const getBool = (key: string): boolean | undefined => {
+    const f = fields[key]
+    if (!f) return undefined
+    return Boolean(f.value)
+  }
+  const getInt = (key: string): 0 | 1 | 2 | undefined => {
+    const v = getNum(key)
+    if (v === undefined) return undefined
+    return (v as 0 | 1 | 2)
+  }
+
+  return {
+    soc: getNum('soc'),
+    batteryPower: getNum('batteryPower'),
+    acPower: getNum('acPower'),
+    solarPower: getNum('solarPower'),
+    outputPower: getNum('outputPower'),
+    batteryTemp: getNum('batteryTemp'),
+    acOut1Enable: getBool('acOut1Enable'),
+    acOut2Enable: getBool('acOut2Enable'),
+    usbOut1Enable: getBool('usbOut1Enable'),
+    sleepMode: getBool('sleepMode'),
+    workMode: getInt('workMode'),
+  }
+}
+
+/** 将 firingAlarms 映射为 DeviceAlert[] */
+export function mapFiringAlarms(
+  alarms: DeviceStateResponse['firingAlarms']
+): DeviceAlert[] {
+  return alarms.map(a => ({
+    alarmId: a.alarmId,
+    alarmCode: a.alarmCode,
+    alarmMessage: a.alarmMessage,
+    severity: (a.severity as DeviceAlert['severity']) ?? 'info',
+    timestamp: a.timestamp,
+    isProcessed: false,
+  }))
 }
 
 // ─── 设备控制写入 ───
