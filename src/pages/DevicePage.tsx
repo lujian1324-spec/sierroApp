@@ -1,19 +1,53 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { Zap, AlertTriangle, X, Plus, QrCode, Bluetooth, RefreshCw, Bell, LayoutGrid, List } from 'lucide-react'
-import ToggleSwitch from '../components/ToggleSwitch'
-import { usePowerStationStore } from '../stores/powerStationStore'
+import {
+  Zap,
+  AlertTriangle,
+  X,
+  Plus,
+  QrCode,
+  Bluetooth,
+  RefreshCw,
+  Bell,
+  LayoutGrid,
+  List,
+  Wifi,
+  WifiOff,
+  Thermometer,
+  Activity,
+  Sun,
+  ChevronRight,
+  Info,
+  Battery,
+  Clock,
+  MapPin,
+  Hash,
+  Cpu,
+  Server,
+  TrendingUp,
+  TrendingDown,
+} from 'lucide-react'
 import { useDeviceStore } from '../stores/deviceStore'
-import { useConnectionStore } from '../stores/connectionStore'
-import { getBleManager } from '../protocols/bleManager'
-import type { ConnectionInfo, BlePowerPacket } from '../types/protocol'
+import { useAuthStore } from '../stores/authStore'
+import { mapFieldsToRealtime } from '../api/deviceApi'
+import type { DeviceListItem, DeviceStateField } from '../api/deviceApi'
 
 // BLE device type
 interface BleDevice {
   id: string
   name: string
   rssi?: number
+}
+
+// 设备实时状态缓存（deviceId → fields）
+interface DeviceRealtimeCache {
+  [deviceId: string]: {
+    fields: Record<string, DeviceStateField>
+    raw: ReturnType<typeof mapFieldsToRealtime>
+    loading: boolean
+    lastUpdated: number
+  }
 }
 
 // Device display icon mapping
@@ -27,28 +61,37 @@ const deviceIcons: Record<string, string> = {
   default: '🔌',
 }
 
-// Device model names
-const modelNames: Record<string, string> = {
-  sierro1000: 'Sierro 1000',
-  sierro2000: 'Sierro 2000',
-}
-
 export default function DevicePage() {
   const navigate = useNavigate()
-  const { devices, toggleDevice, selectDevice } = usePowerStationStore()
-  const deviceStore = useDeviceStore()
-  const { setBleConnection } = useConnectionStore()
+  const {
+    devices,
+    deviceLoading,
+    loadDevices,
+    loadStations,
+    loadDeviceState,
+    selectedDeviceState,
+    stateLoading,
+  } = useDeviceStore()
+  const isAuthenticated = useAuthStore(s => s.isAuthenticated)
+
   const [showAddModal, setShowAddModal] = useState(false)
   const [showManualAdd, setShowManualAdd] = useState(false)
   const [showQrScan, setShowQrScan] = useState(false)
   const [showBleScan, setShowBleScan] = useState(false)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [error, setError] = useState<string | null>(null)
+
+  // 设备实时状态缓存
+  const [realtimeCache, setRealtimeCache] = useState<DeviceRealtimeCache>({})
+  const [refreshingId, setRefreshingId] = useState<string | null>(null)
+
+  // 设备参数详情 modal
+  const [showDeviceParams, setShowDeviceParams] = useState<DeviceListItem | null>(null)
 
   // BLE scan state
   const [isScanning, setIsScanning] = useState(false)
   const [scannedDevices, setScannedDevices] = useState<BleDevice[]>([])
   const [scanError, setScanError] = useState<string | null>(null)
-  const bleManagerRef = useRef<ReturnType<typeof getBleManager> | null>(null)
 
   // QR scan state
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -58,122 +101,162 @@ export default function DevicePage() {
   const [qrError, setQrError] = useState<string | null>(null)
   const animationFrameRef = useRef<number | null>(null)
 
-  // Load devices
-  useEffect(() => {
-    deviceStore.loadDevices()
-    deviceStore.loadStations()
-  }, [])
+  // ── 加载设备列表 ──
+  const fetchDevices = useCallback(async () => {
+    setError(null)
+    try {
+      await loadDevices(1, 50)
+      await loadStations(1, 50)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load devices')
+    }
+  }, [loadDevices, loadStations])
 
-  // Check for low battery alert
-  const hasLowBatteryAlert = devices.some(d => d.batteryLevel < 30 && d.isOn)
+  useEffect(() => {
+    fetchDevices()
+  }, [fetchDevices])
+
+  // ── 加载设备实时状态（每个设备） ──
+  const fetchDeviceRealtime = useCallback(async (deviceId: number | string) => {
+    const idStr = String(deviceId)
+    setRealtimeCache(prev => ({
+      ...prev,
+      [idStr]: { ...prev[idStr], fields: {}, raw: {}, loading: true, lastUpdated: 0 },
+    }))
+    try {
+      await loadDeviceState(deviceId)
+    } catch {
+      setRealtimeCache(prev => ({
+        ...prev,
+        [idStr]: { ...prev[idStr], loading: false },
+      }))
+    }
+  }, [loadDeviceState])
+
+  // 监听 selectedDeviceState 变化并更新缓存
+  const prevSelectedIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    const currentId = useDeviceStore.getState().selectedDeviceId
+    if (!currentId) return
+
+    // 新的设备状态数据到来
+    if (selectedDeviceState && selectedDeviceState.deviceId) {
+      const idStr = String(selectedDeviceState.deviceId)
+      const mapped = mapFieldsToRealtime(selectedDeviceState.fields)
+      setRealtimeCache(prev => ({
+        ...prev,
+        [idStr]: {
+          fields: selectedDeviceState.fields,
+          raw: mapped,
+          loading: false,
+          lastUpdated: Date.now(),
+        },
+      }))
+    }
+  }, [selectedDeviceState])
+
+  // 页面加载后为每个设备获取实时状态
+  useEffect(() => {
+    if (devices.length > 0 && isAuthenticated) {
+      devices.forEach(d => {
+        if (!realtimeCache[String(d.id)] || Date.now() - (realtimeCache[String(d.id)]?.lastUpdated ?? 0) > 60000) {
+          fetchDeviceRealtime(d.id)
+        }
+      })
+    }
+  }, [devices, isAuthenticated])
+
+  // ── 刷新单个设备 ──
+  const handleRefreshDevice = async (deviceId: number, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setRefreshingId(String(deviceId))
+    await fetchDeviceRealtime(deviceId)
+    setRefreshingId(null)
+  }
+
+  // ── 刷新全部设备 ──
+  const handleRefreshAll = async () => {
+    setError(null)
+    try {
+      await loadDevices(1, 50)
+      // 依次刷新每个设备的实时状态
+      for (const d of devices) {
+        await fetchDeviceRealtime(d.id)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Refresh failed')
+    }
+  }
+
+  // ── 从缓存获取实时参数 ──
+  const getDeviceField = (deviceId: string | number, key: string): string => {
+    const cache = realtimeCache[String(deviceId)]
+    if (!cache?.fields) return '--'
+    const field = cache.fields[key]
+    return field?.valueDisplay ?? (field?.value !== undefined ? String(field.value) : '--')
+  }
+
+  const getDeviceNum = (deviceId: string | number, key: string): number | null => {
+    const cache = realtimeCache[String(deviceId)]
+    if (!cache?.raw) return null
+    const val = cache.raw[key as keyof typeof cache.raw]
+    return val !== undefined ? Number(val) : null
+  }
 
   const getBatteryColor = (level: number) => {
-    if (level === 0) return 'text-[#48484A]'
+    if (level <= 0) return 'text-[#48484A]'
     if (level < 20) return 'text-[#FF3B30]'
     if (level < 60) return 'text-[#FF9500]'
     return 'text-[#34C759]'
   }
 
   const getBatteryBg = (level: number) => {
-    if (level === 0) return 'bg-[rgba(72,72,74,0.08)]'
+    if (level <= 0) return 'bg-[rgba(72,72,74,0.08)]'
     if (level < 20) return 'bg-[rgba(255,59,48,0.06)]'
     if (level < 60) return 'bg-[rgba(255,149,0,0.06)]'
     return 'bg-[rgba(52,199,89,0.06)]'
   }
 
-  const getDeviceIcon = (type: string) => deviceIcons[type] || deviceIcons.default
-  const getModelName = (type: string) => modelNames[type.toLowerCase()] || 'Sierro 1000'
-
-  const handleDeviceClick = (deviceId: string) => {
-    selectDevice(deviceId)
-    navigate(`/device/${deviceId}`)
+  const getDeviceIcon = (sortKey: string) => {
+    const key = sortKey?.toLowerCase() ?? ''
+    if (key.includes('storage') || key.includes('power') || key.includes('sierro')) return deviceIcons.powerstation
+    if (key.includes('fridge')) return deviceIcons.fridge
+    if (key.includes('cpap')) return deviceIcons.cpap
+    return deviceIcons.default
   }
 
-  // ---- BLE Scan ----
-  const handleBluetoothScan = async () => {
-    setShowAddModal(false)
-    setShowBleScan(true)
-    setIsScanning(true)
-    setScanError(null)
-    setScannedDevices([])
-
-    try {
-      if (!navigator.bluetooth) {
-        setScanError('Current browser does not support Web Bluetooth')
-        setIsScanning(false)
-        return
-      }
-
-      const bleManager = getBleManager({
-        onStatusChange: (info: ConnectionInfo) => {
-          setBleConnection(info)
-          if (info.status === 'connected' && info.deviceName) {
-            setScannedDevices(prev => {
-              const exists = prev.find(d => d.id === info.deviceId)
-              if (exists) return prev
-              return [...prev, { id: info.deviceId || '', name: info.deviceName || 'Unknown', rssi: info.rssi }]
-            })
-            setIsScanning(false)
-          } else if (info.status === 'error') {
-            setScanError(info.errorMessage || 'Scan failed')
-            setIsScanning(false)
-          }
-        },
-        onPowerData: (_packet: BlePowerPacket) => {},
-        onBatteryLevel: (_level: number) => {},
-        onPortStatus: (_bitmap: number) => {},
-        onModeChange: (_mode: string) => {},
-      })
-
-      bleManagerRef.current = bleManager
-      await bleManager.connect()
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      if (!msg.includes('User cancelled')) setScanError(msg)
-      setIsScanning(false)
-    }
+  const getWorkModeLabel = (mode: number | null | undefined): string => {
+    if (mode === 1) return 'Backup'
+    if (mode === 2) return 'Eco'
+    return 'Normal'
   }
 
-  const handleCloseBleScan = () => {
-    setShowBleScan(false)
-    setIsScanning(false)
-    setScanError(null)
-    setScannedDevices([])
+  const handleDeviceClick = (device: DeviceListItem) => {
+    useDeviceStore.getState().selectDevice(String(device.id))
+    navigate(`/device/${device.id}`)
   }
 
-  // ---- QR Scan ----
-  useEffect(() => {
-    if (showQrScan && !qrResult) startQrScan()
-    return () => stopQrScan()
-  }, [showQrScan])
-
-  const startQrScan = async () => {
-    setQrScanning(true)
-    setQrError(null)
-    setQrResult(null)
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        videoRef.current.play()
-      }
-    } catch (err) {
-      setQrError(`Camera error: ${err instanceof Error ? err.message : String(err)}`)
-      setQrScanning(false)
-    }
+  // ── 未登录提示 ──
+  if (!isAuthenticated) {
+    return (
+      <div className="h-full flex flex-col bg-[#000000] overflow-hidden">
+        <div className="px-5 pt-4 pb-3 safe-area-top">
+          <h2 className="text-xl font-bold text-[#FFFFFF]">Devices</h2>
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center px-5">
+          <WifiOff size={48} className="text-[#48484A] mb-3 opacity-40" />
+          <p className="text-sm font-medium text-[#8E8E93] mb-1">Not signed in</p>
+          <p className="text-xs text-[#48484A] mb-6 text-center">Sign in to view your devices and real-time parameters</p>
+          <button
+            onClick={() => navigate('/login')}
+            className="px-6 py-2.5 bg-[#01D6BE] rounded-full text-[#000000] text-[13px] font-semibold"
+          >
+            Sign In
+          </button>
+        </div>
+      </div>
+    )
   }
-
-  const stopQrScan = () => {
-    if (animationFrameRef.current) { cancelAnimationFrame(animationFrameRef.current); animationFrameRef.current = null }
-    if (videoRef.current?.srcObject) {
-      (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop())
-      videoRef.current.srcObject = null
-    }
-    setQrScanning(false)
-  }
-
-  const handleCloseQrScan = () => { stopQrScan(); setShowQrScan(false); setQrResult(null); setQrError(null) }
-  const simulateQrScan = () => { stopQrScan(); setQrResult('DEVICE_ID:SIERRA_1000_ABC123\nMODEL:SIERRA 1000\nSN:SN202403001') }
 
   return (
     <div className="h-full flex flex-col bg-[#000000] overflow-hidden">
@@ -187,6 +270,13 @@ export default function DevicePage() {
         <div className="flex justify-between items-center mb-3">
           <h2 className="text-xl font-bold text-[#FFFFFF]">Devices</h2>
           <div className="flex items-center gap-2">
+            <button
+              onClick={handleRefreshAll}
+              className="w-9 h-9 rounded-full bg-[#1C1C1E] flex items-center justify-center text-[#FFFFFF] hover:bg-[#2C2C2E] transition-colors"
+              title="Refresh all devices"
+            >
+              <RefreshCw size={16} />
+            </button>
             <button
               onClick={() => navigate('/notifications')}
               className="w-9 h-9 rounded-full bg-[#1C1C1E] flex items-center justify-center text-[#FFFFFF] hover:bg-[#2C2C2E] transition-colors"
@@ -208,9 +298,9 @@ export default function DevicePage() {
           </div>
         </div>
 
-        {/* Low Battery Alert Banner */}
+        {/* Error Banner */}
         <AnimatePresence>
-          {hasLowBatteryAlert && (
+          {error && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
@@ -218,10 +308,8 @@ export default function DevicePage() {
               className="bg-[rgba(255,59,48,0.08)] border border-[rgba(255,59,48,0.15)] rounded-[14px] px-4 py-2.5 flex items-center gap-2 mb-1"
             >
               <AlertTriangle size={14} className="text-[#FF3B30] flex-shrink-0" />
-              <span className="text-[12px] text-[#FF3B30]">
-                The battery for <strong>{devices.find(d => d.batteryLevel < 30 && d.isOn)?.name}</strong> is below 30%
-              </span>
-              <button onClick={() => navigate('/notifications')} className="ml-auto text-[#FF3B30]">
+              <span className="text-[12px] text-[#FF3B30] flex-1">{error}</span>
+              <button onClick={() => setError(null)} className="text-[#FF3B30]">
                 <X size={14} />
               </button>
             </motion.div>
@@ -231,92 +319,386 @@ export default function DevicePage() {
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto scrollbar-hide px-5 pb-4">
-        {viewMode === 'grid' ? (
+        {/* Loading Skeleton */}
+        {deviceLoading && devices.length === 0 ? (
+          <div className={viewMode === 'grid' ? 'grid grid-cols-2 gap-2.5' : 'flex flex-col gap-2.5'}>
+            {[0, 1, 2, 3].map(i => (
+              <div key={i} className={`${viewMode === 'grid' ? 'rounded-[20px] p-4' : 'rounded-[18px] p-4'} bg-[#1C1C1E] animate-pulse`}>
+                <div className="h-8 bg-[#2C2C2E] rounded-lg mb-2 w-16" />
+                <div className="h-3 bg-[#2C2C2E] rounded mb-1 w-24" />
+                <div className="h-2 bg-[#2C2C2E] rounded w-20" />
+              </div>
+            ))}
+          </div>
+        ) : viewMode === 'grid' ? (
           /* Bento Box Grid Layout */
           <div className="grid grid-cols-2 gap-2.5">
-            {devices.map((device, index) => (
-              <motion.div
-                key={device.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: index * 0.06, ease: [0.25, 0.46, 0.45, 0.94] }}
-                onClick={() => handleDeviceClick(device.id)}
-                className={`${getBatteryBg(device.batteryLevel)} rounded-[20px] p-4 cursor-pointer active:scale-[0.97] transition-transform relative`}
-              >
-                {/* Battery Percentage */}
-                <div className="flex items-start justify-between mb-2">
-                  <span className={`text-[32px] font-extrabold ${getBatteryColor(device.batteryLevel)} leading-none`}>
-                    {device.batteryLevel}
-                    <span className="text-[16px] font-bold">%</span>
-                  </span>
-                  <div onClick={(e) => e.stopPropagation()}>
-                    <ToggleSwitch
-                      isOn={device.isOn}
-                      onToggle={() => toggleDevice(device.id)}
-                      size="sm"
-                    />
+            {devices.map((device, index) => {
+              const soc = getDeviceNum(device.id, 'soc') ?? 0
+              const batteryPower = getDeviceNum(device.id, 'batteryPower')
+              const outputPower = getDeviceNum(device.id, 'outputPower')
+              const batteryTemp = getDeviceNum(device.id, 'batteryTemp')
+              const workMode = getDeviceNum(device.id, 'workMode')
+              const isCharging = batteryPower !== null && batteryPower > 0
+
+              return (
+                <motion.div
+                  key={device.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: index * 0.06, ease: [0.25, 0.46, 0.45, 0.94] }}
+                  onClick={() => handleDeviceClick(device)}
+                  className={`${getBatteryBg(soc)} rounded-[20px] p-4 cursor-pointer active:scale-[0.97] transition-transform relative`}
+                >
+                  {/* Top row: SOC + Online status + Refresh */}
+                  <div className="flex items-start justify-between mb-2">
+                    <span className={`text-[32px] font-extrabold ${getBatteryColor(soc)} leading-none`}>
+                      {soc}
+                      <span className="text-[16px] font-bold">%</span>
+                    </span>
+                    <div className="flex items-center gap-1">
+                      {/* Online indicator */}
+                      {device.isOnline ? (
+                        <Wifi size={12} className="text-[#34C759]" />
+                      ) : (
+                        <WifiOff size={12} className="text-[#48484A]" />
+                      )}
+                      {/* Refresh single device */}
+                      <button
+                        onClick={(e) => handleRefreshDevice(device.id, e)}
+                        className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-[rgba(255,255,255,0.1)] transition-colors"
+                      >
+                        <RefreshCw
+                          size={11}
+                          className={`text-[#8E8E93] ${refreshingId === String(device.id) ? 'animate-spin' : ''}`}
+                        />
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-                {/* Device Icon + Name */}
-                <div className="flex items-center gap-1.5 mb-1">
-                  <span className="text-[14px]">{getDeviceIcon(device.type)}</span>
-                  <span className="text-[13px] font-semibold text-[#FFFFFF] truncate">
-                    {device.name}
-                  </span>
-                </div>
+                  {/* Charging indicator */}
+                  {isCharging && (
+                    <div className="flex items-center gap-1 mb-1">
+                      <TrendingDown size={10} className="text-[#34C759]" />
+                      <span className="text-[10px] text-[#34C759] font-medium">Charging {Math.abs(batteryPower)}W</span>
+                    </div>
+                  )}
 
-                {/* Model Name */}
-                <div className="text-[11px] text-[#8E8E93]">
-                  {getModelName(device.type)}
-                </div>
-              </motion.div>
-            ))}
+                  {/* Device Icon + Name */}
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="text-[14px]">{getDeviceIcon(device.deviceSortKey)}</span>
+                    <span className="text-[13px] font-semibold text-[#FFFFFF] truncate">
+                      {device.name}
+                    </span>
+                  </div>
+
+                  {/* Model / SN / Station */}
+                  <div className="text-[11px] text-[#8E8E93] truncate">
+                    {device.gatherProtocolNameDisplay || device.model || 'Power Station'}
+                  </div>
+
+                  {/* Bottom: temperature + mode */}
+                  <div className="flex items-center gap-2 mt-1.5">
+                    {batteryTemp !== null && (
+                      <span className="text-[10px] text-[#8E8E93] flex items-center gap-0.5">
+                        <Thermometer size={9} />
+                        {batteryTemp}°C
+                      </span>
+                    )}
+                    {workMode !== null && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[rgba(1,214,190,0.1)] text-[#01D6BE]">
+                        {getWorkModeLabel(workMode)}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Offline overlay */}
+                  {!device.isOnline && (
+                    <div className="absolute top-2 right-2">
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[rgba(72,72,74,0.3)] text-[#48484A] font-medium">
+                        Offline
+                      </span>
+                    </div>
+                  )}
+                </motion.div>
+              )
+            })}
           </div>
         ) : (
           /* List Layout */
           <div className="flex flex-col gap-2.5">
-            {devices.map((device, index) => (
-              <motion.div
-                key={device.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: index * 0.06, ease: [0.25, 0.46, 0.45, 0.94] }}
-                onClick={() => handleDeviceClick(device.id)}
-                className={`flex items-center gap-3.5 p-4 bg-[#1C1C1E] rounded-[18px] cursor-pointer active:bg-[#2C2C2E] transition-all duration-200`}
-              >
-                <div className="w-11 h-11 rounded-[14px] bg-[rgba(1,214,190,0.12)] flex items-center justify-center flex-shrink-0 text-lg">
-                  {getDeviceIcon(device.type)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[14px] font-semibold text-[#FFFFFF] truncate">{device.name}</span>
-                    {device.batteryLevel < 30 && <AlertTriangle size={12} className="text-[#FF3B30] flex-shrink-0" />}
+            {devices.map((device, index) => {
+              const soc = getDeviceNum(device.id, 'soc') ?? 0
+              const batteryPower = getDeviceNum(device.id, 'batteryPower')
+              const outputPower = getDeviceNum(device.id, 'outputPower')
+              const batteryTemp = getDeviceNum(device.id, 'batteryTemp')
+              const workMode = getDeviceNum(device.id, 'workMode')
+              const isCharging = batteryPower !== null && batteryPower > 0
+
+              return (
+                <motion.div
+                  key={device.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: index * 0.06, ease: [0.25, 0.46, 0.45, 0.94] }}
+                  onClick={() => handleDeviceClick(device)}
+                  className="flex items-center gap-3.5 p-4 bg-[#1C1C1E] rounded-[18px] cursor-pointer active:bg-[#2C2C2E] transition-all duration-200"
+                >
+                  {/* Left: Icon */}
+                  <div className="w-11 h-11 rounded-[14px] bg-[rgba(1,214,190,0.12)] flex items-center justify-center flex-shrink-0 text-lg relative">
+                    {getDeviceIcon(device.deviceSortKey)}
+                    {/* Online dot */}
+                    <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#1C1C1E] ${device.isOnline ? 'bg-[#34C759]' : 'bg-[#48484A]'}`} />
                   </div>
-                  <div className="flex items-center gap-3 mt-1">
-                    <span className="text-xs text-[#8E8E93]">{getModelName(device.type)}</span>
-                    <span className={`flex items-center gap-1 text-xs font-semibold ${getBatteryColor(device.batteryLevel)}`}>
-                      {device.batteryLevel}%
-                    </span>
+
+                  {/* Middle: Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[14px] font-semibold text-[#FFFFFF] truncate">{device.name}</span>
+                      {!device.isOnline && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[rgba(72,72,74,0.3)] text-[#48484A]">Offline</span>}
+                      {device.isAlarmed && <AlertTriangle size={12} className="text-[#FF3B30] flex-shrink-0" />}
+                    </div>
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className="text-xs text-[#8E8E93]">{device.gatherProtocolNameDisplay || device.model || 'Power Station'}</span>
+                      {device.serialNumber && (
+                        <span className="text-[10px] text-[#48484A] hidden sm:inline">SN: {device.serialNumber.slice(-8)}</span>
+                      )}
+                    </div>
+
+                    {/* Parameter badges */}
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <span className={`flex items-center gap-1 text-xs font-semibold ${getBatteryColor(soc)}`}>
+                        <Battery size={11} /> {soc}%
+                      </span>
+                      {batteryPower !== null && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[rgba(52,199,89,0.1)] text-[#34C759]">
+                          {isCharging ? `${Math.abs(batteryPower)}W in` : `${Math.abs(batteryPower)}W out`}
+                        </span>
+                      )}
+                      {outputPower !== null && outputPower > 0 && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[rgba(255,149,0,0.1)] text-[#FF9500]">
+                          Out {outputPower}W
+                        </span>
+                      )}
+                      {batteryTemp !== null && (
+                        <span className="text-[10px] text-[#8E8E93] flex items-center gap-0.5">
+                          <Thermometer size={9} /> {batteryTemp}°C
+                        </span>
+                      )}
+                      {workMode !== null && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[rgba(1,214,190,0.1)] text-[#01D6BE]">
+                          {getWorkModeLabel(workMode)}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <div onClick={(e) => e.stopPropagation()}>
-                  <ToggleSwitch isOn={device.isOn} onToggle={() => toggleDevice(device.id)} />
-                </div>
-              </motion.div>
-            ))}
+
+                  {/* Right: Refresh + Chevron */}
+                  <div className="flex flex-col items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={(e) => handleRefreshDevice(device.id, e)}
+                      className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-[rgba(255,255,255,0.1)] transition-colors"
+                    >
+                      <RefreshCw
+                        size={13}
+                        className={`text-[#8E8E93] ${refreshingId === String(device.id) ? 'animate-spin' : ''}`}
+                      />
+                    </button>
+                    <ChevronRight size={16} className="text-[#48484A]" />
+                  </div>
+                </motion.div>
+              )
+            })}
           </div>
         )}
 
         {/* Empty State */}
-        {devices.length === 0 && (
+        {!deviceLoading && devices.length === 0 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-16">
             <Zap size={48} className="mx-auto mb-3 text-[#48484A] opacity-30" />
-            <p className="text-sm font-medium text-[#8E8E93] mb-1">No devices yet</p>
-            <p className="text-xs text-[#48484A]">Tap + to add your first device</p>
+            <p className="text-sm font-medium text-[#8E8E93] mb-1">No devices found</p>
+            <p className="text-xs text-[#48484A] mb-1">
+              {error ? 'Check your network connection' : 'Tap + to add your first device'}
+            </p>
+            {error && (
+              <button onClick={fetchDevices} className="mt-3 px-5 py-2 bg-[#01D6BE] rounded-full text-[#000000] text-[13px] font-semibold flex items-center gap-2 mx-auto">
+                <RefreshCw size={14} /> Retry
+              </button>
+            )}
           </motion.div>
         )}
       </div>
+
+      {/* ===== 设备参数详情 Modal ===== */}
+      <AnimatePresence>
+        {showDeviceParams && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-[rgba(0,0,0,0.7)] z-50 flex items-end"
+            onClick={() => setShowDeviceParams(null)}
+          >
+            <motion.div
+              initial={{ y: 400, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 400, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-h-[85vh] bg-[#1C1C1E] rounded-t-[28px] overflow-hidden flex flex-col"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-[rgba(255,255,255,0.06)]">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-[14px] bg-[rgba(1,214,190,0.12)] flex items-center justify-center text-lg">
+                    {getDeviceIcon(showDeviceParams.deviceSortKey)}
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-[#FFFFFF]">{showDeviceParams.name}</h3>
+                    <div className="text-[11px] text-[#8E8E93]">{showDeviceParams.gatherProtocolNameDisplay || showDeviceParams.model}</div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowDeviceParams(null)}
+                  className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center text-[#8E8E93]"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Scrollable content */}
+              <div className="flex-1 overflow-y-auto scrollbar-hide p-5 space-y-4">
+                {/* Device Meta Info */}
+                <div className="space-y-3">
+                  <h4 className="text-[11px] font-bold text-[#8E8E93] tracking-widest uppercase">Device Info</h4>
+                  <div className="bg-[#000000] rounded-[16px] divide-y divide-[rgba(255,255,255,0.06)]">
+                    {[
+                      { icon: Hash, label: 'Serial Number', value: showDeviceParams.serialNumber || '--' },
+                      { icon: Server, label: 'Station', value: showDeviceParams.stationName || '--' },
+                      { icon: Cpu, label: 'Firmware', value: showDeviceParams.softwareVersion || '--' },
+                      { icon: Activity, label: 'Protocol', value: showDeviceParams.gatherProtocolNumber || '--' },
+                      { icon: Wifi, label: 'Status', value: showDeviceParams.isOnline ? 'Online' : 'Offline', valueColor: showDeviceParams.isOnline ? '#34C759' : '#FF3B30' },
+                      { icon: MapPin, label: 'Location', value: showDeviceParams.place || '--' },
+                      { icon: Clock, label: 'Last Data', value: showDeviceParams.lastDataAt ? new Date(showDeviceParams.lastDataAt).toLocaleString() : '--' },
+                    ].map((row) => {
+                      const Icon = row.icon
+                      return (
+                        <div key={row.label} className="flex items-center justify-between px-4 py-3">
+                          <div className="flex items-center gap-2.5">
+                            <Icon size={14} className="text-[#48484A]" />
+                            <span className="text-[13px] text-[#8E8E93]">{row.label}</span>
+                          </div>
+                          <span className="text-[13px] font-medium text-[#FFFFFF] truncate max-w-[180px]" style={row.valueColor ? { color: row.valueColor } : {}}>
+                            {row.value}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Real-time Parameters */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-[11px] font-bold text-[#8E8E93] tracking-widest uppercase">Real-Time Parameters</h4>
+                    {realtimeCache[String(showDeviceParams.id)]?.loading ? (
+                      <RefreshCw size={12} className="text-[#01D6BE] animate-spin" />
+                    ) : (
+                      <button
+                        onClick={() => fetchDeviceRealtime(showDeviceParams.id)}
+                        className="text-[11px] text-[#01D6BE] flex items-center gap-1"
+                      >
+                        <RefreshCw size={11} /> Refresh
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-3 gap-2.5">
+                    {[
+                      { label: 'SOC', value: `${getDeviceNum(showDeviceParams.id, 'soc') ?? '--'}%`, icon: Battery, color: '#34C759' },
+                      { label: 'Battery', value: `${getDeviceNum(showDeviceParams.id, 'batteryPower') ?? '--'}W`, icon: TrendingDown, color: '#01D6BE' },
+                      { label: 'AC Power', value: `${getDeviceNum(showDeviceParams.id, 'acPower') ?? '--'}W`, icon: Zap, color: '#01D6BE' },
+                      { label: 'Solar', value: `${getDeviceNum(showDeviceParams.id, 'solarPower') ?? '--'}W`, icon: Sun, color: '#FF9500' },
+                      { label: 'Output', value: `${getDeviceNum(showDeviceParams.id, 'outputPower') ?? '--'}W`, icon: TrendingUp, color: '#8E8E93' },
+                      { label: 'Temp', value: `${getDeviceNum(showDeviceParams.id, 'batteryTemp') ?? '--'}°C`, icon: Thermometer, color: '#FF9500' },
+                    ].map((item) => {
+                      const Icon = item.icon
+                      return (
+                        <div key={item.label} className="bg-[#000000] rounded-[14px] p-3 flex flex-col items-center">
+                          <Icon size={14} style={{ color: item.color }} className="mb-1.5" />
+                          <div className="text-[14px] font-bold text-[#FFFFFF]">{item.value}</div>
+                          <div className="text-[9px] text-[#8E8E93] mt-0.5">{item.label}</div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Port Status */}
+                <div className="space-y-3">
+                  <h4 className="text-[11px] font-bold text-[#8E8E93] tracking-widest uppercase">Port Controls</h4>
+                  <div className="bg-[#000000] rounded-[16px] divide-y divide-[rgba(255,255,255,0.06)]">
+                    {[
+                      { label: 'AC Output 1', key: 'acOut1Enable' },
+                      { label: 'AC Output 2', key: 'acOut2Enable' },
+                      { label: 'USB Output', key: 'usbOut1Enable' },
+                      { label: 'Sleep Mode', key: 'sleepMode' },
+                    ].map((port) => {
+                      const val = getDeviceField(showDeviceParams.id, port.key)
+                      const isEnabled = val === 'true' || val === '1'
+                      return (
+                        <div key={port.key} className="flex items-center justify-between px-4 py-3">
+                          <span className="text-[13px] text-[#FFFFFF]">{port.label}</span>
+                          <span className={`text-[12px] px-2 py-0.5 rounded-full font-medium ${
+                            isEnabled ? 'bg-[rgba(52,199,89,0.15)] text-[#34C759]' : 'bg-[rgba(255,255,255,0.06)] text-[#48484A]'
+                          }`}>
+                            {isEnabled ? 'ON' : 'OFF'}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div className="bg-[#000000] rounded-[16px] px-4 py-3 flex items-center justify-between">
+                    <span className="text-[13px] text-[#FFFFFF]">Work Mode</span>
+                    <span className="text-[12px] px-2 py-0.5 rounded-full bg-[rgba(1,214,190,0.1)] text-[#01D6BE] font-medium">
+                      {getWorkModeLabel(getDeviceNum(showDeviceParams.id, 'workMode'))}
+                    </span>
+                  </div>
+                </div>
+
+                {/* All API Fields (for debugging) */}
+                {realtimeCache[String(showDeviceParams.id)]?.fields && (
+                  <div className="space-y-3">
+                    <h4 className="text-[11px] font-bold text-[#8E8E93] tracking-widest uppercase">All Parameters</h4>
+                    <div className="bg-[#000000] rounded-[16px] divide-y divide-[rgba(255,255,255,0.04)]">
+                      {Object.entries(realtimeCache[String(showDeviceParams.id)].fields)
+                        .sort((a, b) => a[0].localeCompare(b[0]))
+                        .map(([key, field]) => (
+                          <div key={key} className="flex items-center justify-between px-4 py-2.5">
+                            <span className="text-[12px] text-[#8E8E93] font-mono">{field.name || key}</span>
+                            <span className="text-[12px] text-[#FFFFFF] font-mono">
+                              {field.valueDisplay ?? String(field.value ?? '--')}
+                            </span>
+                          </div>
+                        ))
+                      }
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Bottom: Go to device detail */}
+              <div className="p-5 border-t border-[rgba(255,255,255,0.06)]">
+                <button
+                  onClick={() => { setShowDeviceParams(null); navigate(`/device/${showDeviceParams.id}`) }}
+                  className="w-full py-3 rounded-[14px] bg-[#01D6BE] text-[#000000] text-[14px] font-semibold flex items-center justify-center gap-2"
+                >
+                  View Full Dashboard <ChevronRight size={16} />
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Add Device Modal */}
       <AnimatePresence>
@@ -332,7 +714,7 @@ export default function DevicePage() {
               <h3 className="text-base font-bold text-[#FFFFFF] mb-5">Add New Device</h3>
               <div className="flex flex-col gap-3">
                 {[
-                  { label: 'Bluetooth Scan', desc: 'Find nearby BLE devices', color: '#01D6BE', icon: '📡', action: handleBluetoothScan },
+                  { label: 'Bluetooth Scan', desc: 'Find nearby BLE devices', color: '#01D6BE', icon: '📡' },
                   { label: 'Wi-Fi Setup', desc: 'Connect via local network', color: '#34C759', icon: '📶' },
                   { label: 'Manual Entry', desc: 'Enter device code manually', color: '#FF9500', icon: '⌨️', action: () => { setShowAddModal(false); setShowManualAdd(true) } },
                   { label: 'Scan QR Code', desc: 'Scan device QR code', color: '#01D6BE', icon: '📷', action: () => { setShowAddModal(false); setShowQrScan(true) } },
@@ -362,14 +744,15 @@ export default function DevicePage() {
         {showBleScan && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="absolute inset-0 bg-[rgba(0,0,0,0.8)] z-50 flex items-center justify-center p-5"
-            onClick={handleCloseBleScan}>
+            onClick={() => { setShowBleScan(false); setIsScanning(false); setScanError(null); setScannedDevices([]) }}>
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
               className="w-full max-w-sm bg-[#1C1C1E] rounded-[24px] p-6">
               <div className="flex items-center justify-between mb-5">
                 <h3 className="text-lg font-bold text-[#FFFFFF]">Bluetooth Devices</h3>
-                <button onClick={handleCloseBleScan} className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center text-[#8E8E93]">
+                <button onClick={() => { setShowBleScan(false); setIsScanning(false); setScanError(null); setScannedDevices([]) }}
+                  className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center text-[#8E8E93]">
                   <X size={18} />
                 </button>
               </div>
@@ -387,27 +770,6 @@ export default function DevicePage() {
                   </div>
                   <p className="text-[14px] text-[#FF3B30] text-center mb-1">Scan Failed</p>
                   <p className="text-[12px] text-[#8E8E93] text-center px-4">{scanError}</p>
-                  <button onClick={handleBluetoothScan} className="mt-4 px-5 py-2 bg-[#01D6BE] rounded-full text-[#000000] text-[13px] font-semibold flex items-center gap-2">
-                    <RefreshCw size={14} /> Retry
-                  </button>
-                </div>
-              )}
-              {scannedDevices.length > 0 && (
-                <div className="space-y-3">
-                  <p className="text-[12px] text-[#8E8E93] mb-3">Found {scannedDevices.length} device(s)</p>
-                  {scannedDevices.map((device) => (
-                    <motion.div key={device.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
-                      className="flex items-center gap-3 p-4 bg-[#2C2C2E] rounded-[16px]">
-                      <div className="w-10 h-10 rounded-full bg-[rgba(1,214,190,0.15)] flex items-center justify-center">
-                        <Bluetooth size={20} className="text-[#01D6BE]" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-[14px] font-semibold text-[#FFFFFF]">{device.name}</p>
-                        <p className="text-[11px] text-[#8E8E93]">{device.rssi ? `Signal: ${device.rssi} dBm` : ''}</p>
-                      </div>
-                      <button onClick={() => handleCloseBleScan()} className="px-4 py-2 bg-[#01D6BE] rounded-full text-[#000000] text-[12px] font-semibold">Connect</button>
-                    </motion.div>
-                  ))}
                 </div>
               )}
               {!isScanning && !scanError && scannedDevices.length === 0 && (
@@ -416,9 +778,6 @@ export default function DevicePage() {
                     <Bluetooth size={24} className="text-[#8E8E93]" />
                   </div>
                   <p className="text-[14px] text-[#8E8E93]">No devices found</p>
-                  <button onClick={handleBluetoothScan} className="mt-4 px-5 py-2 bg-[#01D6BE] rounded-full text-[#000000] text-[13px] font-semibold flex items-center gap-2">
-                    <RefreshCw size={14} /> Scan Again
-                  </button>
                 </div>
               )}
             </motion.div>
@@ -433,7 +792,8 @@ export default function DevicePage() {
             className="absolute inset-0 bg-[rgba(0,0,0,0.9)] z-50 flex flex-col">
             <div className="flex items-center justify-between p-5 safe-area-top">
               <h3 className="text-lg font-bold text-[#FFFFFF]">Scan QR Code</h3>
-              <button onClick={handleCloseQrScan} className="w-9 h-9 rounded-full bg-[#2C2C2E] flex items-center justify-center text-[#FFFFFF]">
+              <button onClick={() => { stopQrScan(); setShowQrScan(false); setQrResult(null); setQrError(null) }}
+                className="w-9 h-9 rounded-full bg-[#2C2C2E] flex items-center justify-center text-[#FFFFFF]">
                 <X size={20} />
               </button>
             </div>
@@ -447,10 +807,6 @@ export default function DevicePage() {
                       {([['top-0 left-0', 'border-t-4 border-l-4'], ['top-0 right-0', 'border-t-4 border-r-4'], ['bottom-0 left-0', 'border-b-4 border-l-4'], ['bottom-0 right-0', 'border-b-4 border-r-4']] as const).map(([pos, border], i) => (
                         <div key={i} className={`absolute w-8 h-8 ${pos} ${border} border-[#01D6BE] rounded-sm`} />
                       ))}
-                      {qrScanning && (
-                        <motion.div className="absolute left-2 right-2 h-0.5 bg-[#01D6BE] shadow-[0_0_10px_#01D6BE]"
-                          animate={{ top: ['5%', '95%', '5%'] }} transition={{ duration: 2.5, repeat: Infinity, ease: 'linear' }} />
-                      )}
                     </div>
                     {!qrScanning && !qrError && (
                       <div className="absolute inset-0 bg-[#1C1C1E] rounded-[20px] flex items-center justify-center">
@@ -467,7 +823,6 @@ export default function DevicePage() {
                     <>
                       <p className="text-[15px] font-semibold text-[#FFFFFF] mb-1">Point camera at QR code</p>
                       <p className="text-[12px] text-[#8E8E93]">The code will be scanned automatically</p>
-                      <button onClick={simulateQrScan} className="mt-6 px-4 py-2 bg-[#2C2C2E] rounded-full text-[#8E8E93] text-[12px]">Simulate Scan (Test)</button>
                     </>
                   )}
                 </>
@@ -482,7 +837,7 @@ export default function DevicePage() {
                   </div>
                   <div className="flex gap-3">
                     <button onClick={() => { setQrResult(null); startQrScan() }} className="flex-1 h-11 rounded-[14px] bg-[#2C2C2E] text-[#FFFFFF] text-[14px] font-medium">Scan Again</button>
-                    <button onClick={handleCloseQrScan} className="flex-1 h-11 rounded-[14px] bg-[#01D6BE] text-[#000000] text-[14px] font-semibold">Add Device</button>
+                    <button onClick={() => { stopQrScan(); setShowQrScan(false); setQrResult(null); setQrError(null) }} className="flex-1 h-11 rounded-[14px] bg-[#01D6BE] text-[#000000] text-[14px] font-semibold">Add Device</button>
                   </div>
                 </motion.div>
               )}
@@ -515,4 +870,31 @@ export default function DevicePage() {
       </AnimatePresence>
     </div>
   )
+
+  // ── QR helpers (kept for QR modal) ──
+
+  function stopQrScan() {
+    if (animationFrameRef.current) { cancelAnimationFrame(animationFrameRef.current); animationFrameRef.current = null }
+    if (videoRef.current?.srcObject) {
+      (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop())
+      videoRef.current.srcObject = null
+    }
+    setQrScanning(false)
+  }
+
+  async function startQrScan() {
+    setQrScanning(true)
+    setQrError(null)
+    setQrResult(null)
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+        videoRef.current.play()
+      }
+    } catch (err) {
+      setQrError(`Camera error: ${err instanceof Error ? err.message : String(err)}`)
+      setQrScanning(false)
+    }
+  }
 }

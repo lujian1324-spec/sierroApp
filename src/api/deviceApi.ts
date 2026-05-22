@@ -182,6 +182,8 @@ export interface DeviceStateField {
   unit: string
   valueType: string
   category: string
+  isHidden?: boolean
+  nameDisplay?: string
 }
 
 export interface DeviceStateGroup {
@@ -189,7 +191,8 @@ export interface DeviceStateGroup {
   key: string
   name: string
   category: string
-  stateItems: DeviceStateField[]
+  isHidden?: boolean
+  stateItems: Array<DeviceStateField & { isHidden: boolean; nameDisplay: string }>
 }
 
 export interface DeviceStateResponse {
@@ -878,11 +881,55 @@ export async function fetchSimpleState(
   )
 }
 
-/** 获取设备简单能量流动 */
+/**
+ * 获取设备简单能量流动（/deviceState/simple/energy/flow/v1）
+ * 返回 deviceAttributeState（全量字段 + 分组）+ pvPanelFlow / gridFlow / batteryFlow / loadFlow
+ */
 export async function fetchSimpleEnergyFlow(
-  deviceId: string | number
-): Promise<ApiResponse<unknown>> {
-  return api.get<unknown>(
-    `/deviceState/simple/energy/flow/v1?deviceId=${deviceId}`
+  deviceId: string | number,
+  dataSource = 1
+): Promise<ApiResponse<EnergyFlowData>> {
+  return api.get<EnergyFlowData>(
+    `/deviceState/simple/energy/flow/v1?deviceId=${deviceId}&dataSource=${dataSource}`
   )
+}
+
+/** 能量流动数据类型 */
+export interface EnergyFlowData {
+  deviceAttributeState: {
+    time: string
+    fields: Record<string, DeviceStateField>
+    groups: Array<{
+      key: string
+      name: string
+      isHidden?: boolean
+      stateItems: Array<DeviceStateField & { isHidden: boolean; nameDisplay: string }>
+    }>
+  }
+  pvPanelFlow: EnergyFlowNode | null
+  gridFlow: EnergyFlowNode | null
+  batteryFlow: EnergyFlowNode | null
+  loadFlow: EnergyFlowNode | null
+  generatorFlow: EnergyFlowNode | null
+  upsFlow: EnergyFlowNode | null
+  ctFlow: EnergyFlowNode | null
+}
+
+export interface EnergyFlowNode {
+  key: string
+  localeTitle: string
+  iconResid: string
+  value: {
+    key: string
+    unit: string
+    value: number | string
+    valueDisplay: string
+    isHidden: boolean
+    nameDisplay: string
+  }
+  extraValues: Array<unknown>
+  isLight: boolean | null
+  flowDirection: number | null   // 1=流入电池, -1=流出电池, null=无方向
+  gatherDeviceAttributeGroupKey: string
+  isEnabled: boolean
 }

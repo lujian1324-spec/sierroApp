@@ -25,6 +25,7 @@ import {
   setPeakValleyGeneral,
   fetchStationList,
   addStation,
+  fetchSimpleEnergyFlow,
   type DeviceListItem,
   type DeviceStateResponse,
   type AddDeviceRequest,
@@ -34,6 +35,7 @@ import {
   type StationItem,
   type StationAddRequest,
   type PeakValleyGeneralConfig,
+  type EnergyFlowData,
 } from '../api/deviceApi'
 import type { ApiResponse } from '../utils/apiClient'
 
@@ -63,6 +65,11 @@ interface DeviceStoreState {
   alarmTotal: number
   alarmLoading: boolean
 
+  // 能量流动（/deviceState/simple/energy/flow/v1）
+  energyFlow: EnergyFlowData | null
+  energyFlowLoading: boolean
+  energyFlowError: string | null
+
   // 操作
   loadDevices: (page?: number, count?: number, filters?: Record<string, unknown>) => Promise<void>
   loadDeviceDetails: (deviceId: string | number) => Promise<void>
@@ -83,6 +90,7 @@ interface DeviceStoreState {
   loadPeakValley: (deviceId: string | number) => Promise<void>
   enablePeakValley: (deviceId: number, enabled: boolean) => Promise<ApiResponse<unknown>>
   savePeakValleyGeneral: (data: PeakValleyGeneralConfig) => Promise<ApiResponse<unknown>>
+  loadEnergyFlow: (deviceId: string | number) => Promise<void>
 }
 
 // ═══════════════════════════════════════════════════════
@@ -108,6 +116,11 @@ export const useDeviceStore = create<DeviceStoreState>()(
       alarms: [],
       alarmTotal: 0,
       alarmLoading: false,
+
+      // 能量流动
+      energyFlow: null,
+      energyFlowLoading: false,
+      energyFlowError: null,
 
       // ─── 设备列表 ───
 
@@ -328,6 +341,26 @@ export const useDeviceStore = create<DeviceStoreState>()(
 
       savePeakValleyGeneral: async (data) => {
         return setPeakValleyGeneral(data)
+      },
+
+      // ─── 能量流动（每分钟轮询）───
+      loadEnergyFlow: async (deviceId: string | number) => {
+        if (!deviceId) return
+        set({ energyFlowLoading: true, energyFlowError: null })
+        try {
+          const result = await fetchSimpleEnergyFlow(deviceId, 1)
+          if ((result.code === 0 || result.code === '0') && result.data) {
+            set({ energyFlow: result.data, energyFlowLoading: false })
+          } else {
+            set({
+              energyFlowLoading: false,
+              energyFlowError: result.message || 'Failed to load energy flow',
+            })
+          }
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : String(e)
+          set({ energyFlowLoading: false, energyFlowError: msg })
+        }
       },
     }),
     {
