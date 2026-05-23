@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -21,8 +21,14 @@ import {
   DollarSign,
   Calendar,
   Edit2,
+  Save,
+  Loader2,
+  RefreshCw,
+  CloudOff,
 } from 'lucide-react'
 import { usePowerStationStore } from '../stores/powerStationStore'
+import { useDeviceStore } from '../stores/deviceStore'
+import { mapBundleToSettings, mapSettingsToGeneralConfig } from '../api/deviceApi'
 import type { PeakShavingSchedule } from '../types'
 
 // 日程类型配置 — 色盲友好（颜色 + 图标标签）
@@ -81,6 +87,83 @@ export default function SmartSchedulePage() {
     powerStation,
   } = usePowerStationStore()
 
+  // T18: 接入设备 Store 的削峰填谷 API
+  const {
+    selectedDeviceId,
+    peakValleyConfig,
+    peakValleyLoading,
+    peakValleySaving,
+    peakValleyError,
+    loadPeakValley,
+    enablePeakValley,
+    savePeakValleyGeneral,
+  } = useDeviceStore()
+
+  // 首次加载：从 API 拉取削峰填谷配置
+  const [apiConfigLoaded, setApiConfigLoaded] = useState(false)
+  useEffect(() => {
+    if (!selectedDeviceId || apiConfigLoaded) return
+    const deviceIdNum = Number(selectedDeviceId)
+    if (isNaN(deviceIdNum) || deviceIdNum <= 0) return
+    ;(async () => {
+      const bundle = await loadPeakValley(deviceIdNum)
+      if (bundle) {
+        const settings = mapBundleToSettings(bundle)
+        if (settings.schedules && settings.schedules.length > 0) {
+          updatePeakShavingSettings(settings)
+        }
+      }
+      setApiConfigLoaded(true)
+    })()
+  }, [selectedDeviceId, apiConfigLoaded, loadPeakValley, updatePeakShavingSettings])
+
+  // 手动刷新
+  const handleRefresh = useCallback(async () => {
+    if (!selectedDeviceId) return
+    const deviceIdNum = Number(selectedDeviceId)
+    if (isNaN(deviceIdNum) || deviceIdNum <= 0) return
+    const bundle = await loadPeakValley(deviceIdNum)
+    if (bundle) {
+      const settings = mapBundleToSettings(bundle)
+      updatePeakShavingSettings(settings)
+    }
+  }, [selectedDeviceId, loadPeakValley, updatePeakShavingSettings])
+
+  // 开/关削峰填谷 — 通过 API
+  const handleTogglePeakShaving = useCallback(async (enabled: boolean) => {
+    if (!selectedDeviceId) {
+      // 无真实设备，回退到本地 mock 操作
+      togglePeakShaving(enabled)
+      return
+    }
+    try {
+      await enablePeakValley(Number(selectedDeviceId), enabled)
+      // API 成功后更新本地状态
+      togglePeakShaving(enabled)
+    } catch {
+      // 失败时不做本地更新
+    }
+  }, [selectedDeviceId, enablePeakValley, togglePeakShaving])
+
+  // 保存到设备 — 将当前设置推送到 API
+  const handleSaveToDevice = useCallback(async () => {
+    if (!selectedDeviceId) return
+    try {
+      const config = mapSettingsToGeneralConfig(Number(selectedDeviceId), peakShavingSettings)
+      await savePeakValleyGeneral(config)
+    } catch {
+      // error is tracked via peakValleyError in deviceStore
+    }
+  }, [selectedDeviceId, peakShavingSettings, savePeakValleyGeneral])
+
+  // 日程变更后自动保存到 API（debounce 效果：在关闭添加/编辑 modal 时触发）
+  const handleScheduleChanged = useCallback(() => {
+    if (selectedDeviceId && apiConfigLoaded) {
+      const config = mapSettingsToGeneralConfig(Number(selectedDeviceId), { ...peakShavingSettings })
+      savePeakValleyGeneral(config).catch(() => {})
+    }
+  }, [selectedDeviceId, apiConfigLoaded, peakShavingSettings, savePeakValleyGeneral])
+
   const [showAddModal, setShowAddModal] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showTouLookup, setShowTouLookup] = useState(false)
@@ -125,6 +208,8 @@ export default function SmartSchedulePage() {
       updatePeakShavingSchedule(editingSchedule.id, editForm)
       setEditingSchedule(null)
       setEditConflict({ conflict: false })
+      // T18: 自动同步到 API
+      setTimeout(() => handleScheduleChanged(), 50)
     }
   }
 
@@ -216,6 +301,8 @@ export default function SmartSchedulePage() {
       addPeakShavingSchedule(newSchedule as Omit<PeakShavingSchedule, 'id'>)
       setShowAddModal(false)
       setNewSchedule({ name: '', startTime: '09:00', endTime: '17:00', type: 'discharge', enabled: true })
+      // T18: 自动同步到 API
+      setTimeout(() => handleScheduleChanged(), 50)
     }
   }
 
@@ -287,7 +374,7 @@ export default function SmartSchedulePage() {
               </div>
             </div>
             <button
-              onClick={() => togglePeakShaving(!peakShavingSettings.enabled)}
+              onClick={() => handleTogglePeakShaving(!peakShavingSettings.enabled)}
               className={`w-14 h-8 rounded-full transition-colors relative
                 ${peakShavingSettings.enabled ? 'bg-[#01D6BE]' : 'bg-[#48484A]'}`}
             >

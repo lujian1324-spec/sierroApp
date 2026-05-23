@@ -139,6 +139,94 @@ function aggregateHistory(
   }
 }
 
+// ─── Demo/Mock 数据（API 失败时的 fallback） ───
+
+function getDemoChartFrame(period: Period): ChartFrame {
+  const rng = (min: number, max: number) =>
+    Math.round((min + Math.random() * (max - min)) * 10) / 10
+
+  if (period === 'Day') {
+    // 24 个点（0:00-23:00），模拟日间太阳能 + 早晚用电高峰
+    const labels: string[] = []
+    const input: number[] = []
+    const output: number[] = []
+    const soc: number[] = []
+    for (let h = 0; h < 24; h++) {
+      labels.push(`${String(h).padStart(2, '0')}:00`)
+      // 太阳能：6:00-18:00 有值，正午峰值 ~1200W
+      input.push(h >= 6 && h <= 18 ? Math.round(1200 * Math.sin((h - 6) * Math.PI / 12)) : 0)
+      // 用电：早晨 6-9 和傍晚 17-22 有峰值
+      const isPeak = (h >= 6 && h <= 9) || (h >= 17 && h <= 22)
+      output.push(isPeak ? rng(400, 900) : rng(50, 200))
+      // SOC：白天充电上升，晚上放电下降，20%-95% 之间
+      const socBase = 60 + 30 * Math.sin((h - 8) * Math.PI / 16)
+      soc.push(Math.round(Math.max(20, Math.min(95, socBase + rng(-5, 5)))))
+    }
+    const totalInputKwh = input.reduce((s, v) => s + (v * 1) / 1000, 0)
+    const totalOutputKwh = output.reduce((s, v) => s + (v * 1) / 1000, 0)
+    const maxOutputIdx = output.indexOf(Math.max(...output))
+    return {
+      input, output, soc, labels,
+      co2Kg: parseFloat((totalInputKwh * 0.5).toFixed(1)),
+      totalInputKwh, totalOutputKwh,
+      insight: `Peak output around ${labels[maxOutputIdx]}`,
+      ecoInsight: `Equivalent to driving ${Math.round(totalOutputKwh * 3.5)} fewer miles`,
+    }
+  }
+
+  if (period === 'Week') {
+    const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    const input = labels.map(() => rng(800, 3500))
+    const output = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(() => rng(2500, 5000))
+      .concat(['Sat', 'Sun'].map(() => rng(1200, 3000)))
+    const soc = labels.map(() => rng(30, 90))
+    const totalInputKwh = input.reduce((s, v) => s + (v * 24) / 1000, 0)
+    const totalOutputKwh = output.reduce((s, v) => s + (v * 24) / 1000, 0)
+    const maxOutputIdx = output.indexOf(Math.max(...output))
+    return {
+      input, output, soc, labels,
+      co2Kg: parseFloat((totalInputKwh * 0.5).toFixed(1)),
+      totalInputKwh, totalOutputKwh,
+      insight: `Highest output on ${labels[maxOutputIdx]}`,
+      ecoInsight: `Equivalent to driving ${Math.round(totalOutputKwh * 3.5)} fewer miles`,
+    }
+  }
+
+  // Month / Range：生成合理的多天数据
+  const days = period === 'Month' ? 30 : 90
+  const labels: string[] = []
+  const input: number[] = []
+  const output: number[] = []
+  const soc: number[] = []
+  for (let i = 0; i < days; i++) {
+    const m = Math.floor(i / 30) + 1
+    const d = (i % 30) + 1
+    labels.push(`${m}/${d}`)
+    input.push(rng(1200, 6000))
+    output.push(rng(800, 4500))
+    soc.push(rng(25, 92))
+  }
+  // 采样到 maxPoints
+  const maxPoints = period === 'Month' ? 30 : 12
+  const step = Math.max(1, Math.ceil(labels.length / maxPoints))
+  const sLabels = labels.filter((_, i) => i % step === 0)
+  const sInput = input.filter((_, i) => i % step === 0)
+  const sOutput = output.filter((_, i) => i % step === 0)
+  const sSoc = soc.filter((_, i) => i % step === 0)
+
+  const hoursPerBucket = period === 'Month' ? 24 : 72
+  const totalInputKwh = sInput.reduce((s, v) => s + (v * hoursPerBucket) / 1000, 0)
+  const totalOutputKwh = sOutput.reduce((s, v) => s + (v * hoursPerBucket) / 1000, 0)
+  const maxOutputIdx = sOutput.indexOf(Math.max(...sOutput))
+  return {
+    input: sInput, output: sOutput, soc: sSoc, labels: sLabels,
+    co2Kg: parseFloat((totalInputKwh * 0.5).toFixed(1)),
+    totalInputKwh, totalOutputKwh,
+    insight: `Output peaked on ${sLabels[maxOutputIdx]}`,
+    ecoInsight: `Equivalent to driving ${Math.round(totalOutputKwh * 3.5)} fewer miles`,
+  }
+}
+
 // ─── 加载骨架屏 ───
 
 function ChartSkeleton() {
@@ -190,6 +278,7 @@ export default function StatsPage() {
   const [historyLoading, setHistoryLoading] = useState(false)
   const [historyError, setHistoryError] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
+  const [useDemo, setUseDemo] = useState(false)
 
   const {
     devices,
@@ -258,13 +347,16 @@ export default function StatsPage() {
 
       if ((result.code === 0 || result.code === '0') && result.data) {
         setHistoryData(result.data)
+        setUseDemo(false) // 成功时切回真实数据
       } else {
         setHistoryError(result.message || 'Failed to load history data')
+        setUseDemo(true)
       }
     } catch (err) {
       setHistoryError(
         err instanceof Error ? err.message : 'Unknown error'
       )
+      setUseDemo(true)
     } finally {
       setHistoryLoading(false)
     }
@@ -276,9 +368,10 @@ export default function StatsPage() {
 
   // 解析图表数据
   const chartFrame = useMemo(() => {
-    if (!historyData) return null
-    return aggregateHistory(historyData, period)
-  }, [historyData, period])
+    if (historyData) return aggregateHistory(historyData, period)
+    if (useDemo) return getDemoChartFrame(period)
+    return null
+  }, [historyData, period, useDemo])
 
   // 生成 SVG path
   const generateAreaPath = (data: number[], width: number, height: number) => {
@@ -366,10 +459,9 @@ export default function StatsPage() {
     </motion.div>
   )
 
-  // 空历史
-  const emptyHistory = historyError
-    ? errorState
-    : (
+  // 空历史：仅在无数据且非 demo 模式时显示
+  const emptyHistory = !historyLoading && !isDataLoaded && !useDemo
+    ? (
       <ChartEmptyState
         message={
           hasDevice
@@ -377,7 +469,7 @@ export default function StatsPage() {
             : `Select a device to view its energy statistics.`
         }
       />
-    )
+    ) : null
 
   return (
     <div className="h-full flex flex-col bg-[#000000] overflow-hidden pt-6">
@@ -428,6 +520,25 @@ export default function StatsPage() {
 
         {hasDevice && (
           <>
+            {/* Demo Mode Banner */}
+            {useDemo && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2 px-4 py-2.5 mb-3 rounded-[14px] bg-[rgba(255,204,0,0.08)] border border-[rgba(255,204,0,0.18)]"
+              >
+                <AlertTriangle size={14} className="text-[#FFCC00] flex-shrink-0" />
+                <span className="text-[11px] text-[#FFCC00] flex-1 leading-snug">
+                  Demo mode — connect device for real data
+                </span>
+                <button
+                  onClick={() => { setUseDemo(false); setRetryCount(c => c + 1); }}
+                  className="text-[11px] text-[#01D6BE] font-semibold hover:opacity-80 transition-opacity ml-1"
+                >
+                  Retry
+                </button>
+              </motion.div>
+            )}
+
             {/* Loading skeleton */}
             {historyLoading && (
               <>

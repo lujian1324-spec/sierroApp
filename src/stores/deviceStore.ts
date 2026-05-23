@@ -35,6 +35,7 @@ import {
   type StationItem,
   type StationAddRequest,
   type PeakValleyGeneralConfig,
+  type PeakValleyBundleResponse,
   type EnergyFlowData,
 } from '../api/deviceApi'
 import type { ApiResponse } from '../utils/apiClient'
@@ -70,6 +71,12 @@ interface DeviceStoreState {
   energyFlowLoading: boolean
   energyFlowError: string | null
 
+  // 削峰填谷
+  peakValleyConfig: PeakValleyBundleResponse | null
+  peakValleyLoading: boolean
+  peakValleySaving: boolean
+  peakValleyError: string | null
+
   // 操作
   loadDevices: (page?: number, count?: number, filters?: Record<string, unknown>) => Promise<void>
   loadDeviceDetails: (deviceId: string | number) => Promise<void>
@@ -87,7 +94,7 @@ interface DeviceStoreState {
   dismissAlarm: (alarmId: number) => Promise<void>
   loadStations: (page?: number, count?: number) => Promise<void>
   createStation: (data: StationAddRequest) => Promise<ApiResponse<unknown>>
-  loadPeakValley: (deviceId: string | number) => Promise<void>
+  loadPeakValley: (deviceId: string | number) => Promise<PeakValleyBundleResponse | null>
   enablePeakValley: (deviceId: number, enabled: boolean) => Promise<ApiResponse<unknown>>
   savePeakValleyGeneral: (data: PeakValleyGeneralConfig) => Promise<ApiResponse<unknown>>
   loadEnergyFlow: (deviceId: string | number) => Promise<void>
@@ -126,6 +133,12 @@ export const useDeviceStore = create<DeviceStoreState>()(
       energyFlow: null,
       energyFlowLoading: false,
       energyFlowError: null,
+
+      // 削峰填谷
+      peakValleyConfig: null,
+      peakValleyLoading: false,
+      peakValleySaving: false,
+      peakValleyError: null,
 
       // ─── 设备列表 ───
 
@@ -340,20 +353,60 @@ export const useDeviceStore = create<DeviceStoreState>()(
       // ─── 削峰填谷 ───
 
       loadPeakValley: async (deviceId) => {
+        set({ peakValleyLoading: true, peakValleyError: null })
         try {
-          await fetchPeakValleyConfig(deviceId)
-        } catch {
-          // ignore
+          const result = await fetchPeakValleyConfig(deviceId)
+          if ((result.code === 0 || result.code === '0') && result.data) {
+            set({ peakValleyConfig: result.data, peakValleyLoading: false })
+            return result.data
+          }
+          set({ peakValleyLoading: false, peakValleyError: result.message || 'Failed to load peak/valley config' })
+          return null
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : String(e)
+          set({ peakValleyLoading: false, peakValleyError: msg })
+          return null
         }
       },
 
       enablePeakValley: async (deviceId, enabled) => {
-        const result = await setPeakValleyEnabled({ deviceId, isEnabled: enabled })
-        return result
+        set({ peakValleySaving: true })
+        try {
+          const result = await setPeakValleyEnabled({ deviceId, isEnabled: enabled })
+          if ((result.code === 0 || result.code === '0') && get().peakValleyConfig) {
+            // 乐观更新本地缓存
+            set({ peakValleyConfig: { ...get().peakValleyConfig!, isEnabled: enabled } })
+          }
+          set({ peakValleySaving: false })
+          return result
+        } catch (e: unknown) {
+          set({ peakValleySaving: false, peakValleyError: String(e) })
+          throw e
+        }
       },
 
       savePeakValleyGeneral: async (data) => {
-        return setPeakValleyGeneral(data)
+        set({ peakValleySaving: true, peakValleyError: null })
+        try {
+          const result = await setPeakValleyGeneral(data)
+          if ((result.code === 0 || result.code === '0') && get().peakValleyConfig) {
+            // 乐观更新本地缓存
+            const existing = get().peakValleyConfig!
+            set({
+              peakValleyConfig: {
+                ...existing,
+                isEnabled: data.isEnabled,
+                generalItem: data,
+              },
+            })
+          }
+          set({ peakValleySaving: false })
+          return result
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : String(e)
+          set({ peakValleySaving: false, peakValleyError: msg })
+          throw e
+        }
       },
 
       // ─── 能量流动（每分钟轮询）───

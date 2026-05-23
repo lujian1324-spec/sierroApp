@@ -357,17 +357,43 @@ export interface UpdateAlarmRequest {
 
 // ─── 削峰填谷 ───
 
+export interface PeakValleyItem {
+  startTime: string         // HH:mm
+  endTime: string           // HH:mm
+  chargeOrDischarge: number // 0=charge, 1=discharge
+  power: number             // W
+  socMin?: number
+  socMax?: number
+}
+
 export interface PeakValleyGeneralConfig {
   deviceId: number
   isEnabled: boolean
-  items: Array<{
-    startTime: string
-    endTime: string
-    chargeOrDischarge: number
-    power: number
-    socMin?: number
-    socMax?: number
-  }>
+  items: PeakValleyItem[]
+  peakPrice?: number
+  offPeakPrice?: number
+  partPeakPrice?: number
+  maxChargePower?: number
+  maxDischargePower?: number
+  minBatteryLevel?: number
+  maxBatteryLevel?: number
+}
+
+/** GET /peakValley/device/get 返回的完整配置 */
+export interface PeakValleyBundleResponse {
+  deviceId: number
+  isEnabled: boolean
+  category?: string           // 'general' | 'customized'
+  generalItem?: PeakValleyGeneralConfig
+  customizedItem?: PeakValleyItem[]
+  peakPrice?: number
+  offPeakPrice?: number
+  partPeakPrice?: number
+  maxChargePower?: number
+  maxDischargePower?: number
+  minSoc?: number
+  maxSoc?: number
+  chargeSocLimit?: number
 }
 
 export interface PeakValleyCustomizedConfig {
@@ -756,8 +782,8 @@ export async function fetchPeakValleyAttributeGroup(
 /** 获取设备常规削峰填谷配置 */
 export async function fetchPeakValleyGeneral(
   deviceId: string | number
-): Promise<ApiResponse<unknown>> {
-  return api.get<unknown>(`/peakValley/device/general/get?deviceId=${deviceId}`)
+): Promise<ApiResponse<PeakValleyGeneralConfig>> {
+  return api.get<PeakValleyGeneralConfig>(`/peakValley/device/general/get?deviceId=${deviceId}`)
 }
 
 /** 设置设备常规削峰填谷 */
@@ -767,11 +793,11 @@ export async function setPeakValleyGeneral(
   return api.post<unknown>('/peakValley/device/general/set', data)
 }
 
-/** 获取设备削峰填谷配置（完整） */
+/** 获取设备削峰填谷配置（完整 bundle） */
 export async function fetchPeakValleyConfig(
   deviceId: string | number
-): Promise<ApiResponse<unknown>> {
-  return api.get<unknown>(`/peakValley/device/get?deviceId=${deviceId}`)
+): Promise<ApiResponse<PeakValleyBundleResponse>> {
+  return api.get<PeakValleyBundleResponse>(`/peakValley/device/get?deviceId=${deviceId}`)
 }
 
 /** 设置自定义削峰填谷 */
@@ -933,4 +959,102 @@ export interface EnergyFlowNode {
   flowDirection: number | null   // 1=流入电池, -1=流出电池, null=无方向
   gatherDeviceAttributeGroupKey: string
   isEnabled: boolean
+}
+
+// ═══════════════════════════════════════════════════════
+// 削峰填谷 — API ←→ UI 映射函数
+// ═══════════════════════════════════════════════════════
+
+import type { PeakShavingSchedule, PeakShavingSettings } from '../types'
+
+/** 将 API 的 chargeOrDischarge 映射为 UI type */
+function chargeOrDischargeToType(cod: number): PeakShavingSchedule['type'] {
+  switch (cod) {
+    case 0: return 'charge'
+    case 1: return 'discharge'
+    case 2: return 'grid'
+    case 3: return 'battery'
+    default: return 'charge'
+  }
+}
+
+/** 将 UI type 映射为 API 的 chargeOrDischarge */
+function typeToChargeOrDischarge(type: PeakShavingSchedule['type']): number {
+  switch (type) {
+    case 'charge': return 0
+    case 'discharge': return 1
+    case 'grid': return 2
+    case 'battery': return 3
+    default: return 0
+  }
+}
+
+/**
+ * 将 API BundleResponse 映射为 UI PeakShavingSchedule[]
+ * 用于从服务器加载配置后填充本地 UI
+ */
+export function mapBundleToSchedules(
+  bundle: PeakValleyBundleResponse
+): PeakShavingSchedule[] {
+  const items = bundle.generalItem?.items ?? []
+  return items.map((item, index) => ({
+    id: `api-${index}`,
+    name: chargeOrDischargeToType(item.chargeOrDischarge) === 'charge'
+      ? `Charge ${item.startTime}-${item.endTime}`
+      : chargeOrDischargeToType(item.chargeOrDischarge) === 'discharge'
+      ? `Discharge ${item.startTime}-${item.endTime}`
+      : `Schedule ${item.startTime}-${item.endTime}`,
+    startTime: item.startTime,
+    endTime: item.endTime,
+    type: chargeOrDischargeToType(item.chargeOrDischarge),
+    enabled: true,
+  }))
+}
+
+/**
+ * 将 API BundleResponse 映射为 UI PeakShavingSettings（部分字段）
+ */
+export function mapBundleToSettings(
+  bundle: PeakValleyBundleResponse
+): Partial<PeakShavingSettings> {
+  return {
+    enabled: bundle.isEnabled,
+    peakPrice: bundle.peakPrice ?? bundle.generalItem?.peakPrice ?? 0.42,
+    offPeakPrice: bundle.offPeakPrice ?? bundle.generalItem?.offPeakPrice ?? 0.12,
+    partPeakPrice: bundle.partPeakPrice ?? bundle.generalItem?.partPeakPrice,
+    maxChargePower: bundle.generalItem?.maxChargePower ?? 500,
+    maxDischargePower: bundle.generalItem?.maxDischargePower ?? 1000,
+    minBatteryLevel: bundle.generalItem?.minBatteryLevel ?? 10,
+    maxBatteryLevel: bundle.generalItem?.maxBatteryLevel ?? 95,
+    schedules: mapBundleToSchedules(bundle),
+  }
+}
+
+/**
+ * 将 UI PeakShavingSettings + schedules 映射为 API PeakValleyGeneralConfig
+ * 用于保存时生成 API 请求体
+ */
+export function mapSettingsToGeneralConfig(
+  deviceId: number,
+  settings: PeakShavingSettings
+): PeakValleyGeneralConfig {
+  return {
+    deviceId,
+    isEnabled: settings.enabled,
+    items: settings.schedules.map(s => ({
+      startTime: s.startTime,
+      endTime: s.endTime,
+      chargeOrDischarge: typeToChargeOrDischarge(s.type),
+      power: s.type === 'charge' ? settings.maxChargePower : settings.maxDischargePower,
+      socMin: settings.minBatteryLevel,
+      socMax: settings.maxBatteryLevel,
+    })),
+    peakPrice: settings.peakPrice,
+    offPeakPrice: settings.offPeakPrice,
+    partPeakPrice: settings.partPeakPrice,
+    maxChargePower: settings.maxChargePower,
+    maxDischargePower: settings.maxDischargePower,
+    minBatteryLevel: settings.minBatteryLevel,
+    maxBatteryLevel: settings.maxBatteryLevel,
+  }
 }
