@@ -35,7 +35,7 @@ import type { UserProfile } from '../types/protocol'
 
 export default function SettingPage() {
   const { powerStation, settings, updateSettings, resetAll, activateFounderBadge } = usePowerStationStore()
-  const { user: authUser } = useAuthStore()
+  const { user: authUser, logout } = useAuthStore()
   const [showPrivacy, setShowPrivacy] = useState(false)
   const [showTerms, setShowTerms] = useState(false)
   const [showSupport, setShowSupport] = useState(false)
@@ -183,6 +183,30 @@ export default function SettingPage() {
           </div>
         </motion.div>
 
+        {/* Founder Badge */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
+          className={`bg-[#1C1C1E] border rounded-[20px] overflow-hidden mb-4 cursor-pointer active:scale-[0.98] transition-transform`}
+          style={{ borderColor: settings.founderBadge ? 'rgba(255,215,0,0.25)' : 'rgba(1,214,190,0.08)' }}
+          onClick={() => setShowFounderModal(true)}>
+          <div className="flex items-center gap-3 px-4 py-3.5">
+            <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${settings.founderBadge ? 'bg-[rgba(255,215,0,0.12)]' : 'bg-[rgba(255,255,255,0.06)]'}`}>
+              <Crown size={16} className={settings.founderBadge ? 'text-[#FFD700]' : 'text-[#FFFFFF]'} />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] font-semibold text-[#FFFFFF]">Founder Badge</span>
+                {settings.founderBadge && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[rgba(255,215,0,0.15)] text-[#FFD700] border border-[rgba(255,215,0,0.3)] font-semibold">Active</span>
+                )}
+              </div>
+              <div className="text-[11px] text-[#8E8E93] mt-0.5">
+                {settings.founderBadge ? `Member #${settings.founderBadgeNumber}` : 'Unlock exclusive benefits'}
+              </div>
+            </div>
+            <ChevronRight size={16} className={settings.founderBadge ? 'text-[#FFD700]' : 'text-[#48484A]'} />
+          </div>
+        </motion.div>
+
         {/* Support */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
           className="bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] rounded-[20px] overflow-hidden mb-4">
@@ -292,7 +316,9 @@ export default function SettingPage() {
               {/* Actions */}
               <div className="bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] rounded-[20px] overflow-hidden mb-4">
                 <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[rgba(1,214,190,0.06)] cursor-pointer"
-                  onClick={() => setShowManageAccount(false)}>
+                  onClick={async () => {
+                    await logout()
+                  }}>
                   <div className="w-9 h-9 rounded-lg bg-[rgba(255,255,255,0.06)] flex items-center justify-center">
                     <LogOut size={16} className="text-[#FFFFFF]" />
                   </div>
