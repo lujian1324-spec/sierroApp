@@ -398,7 +398,6 @@ export default function StatsPage() {
   const soc = deviceRealtime?.soc ?? 0
   const batteryTemp = deviceRealtime?.batteryTemp ?? 0
   const batteryHealth = 95 // 默认值，API 不直接返回
-  const isWeek = period === 'Week'
   const isDataLoaded = chartFrame !== null
 
   // 设备名称
@@ -437,25 +436,6 @@ export default function StatsPage() {
         <WifiOff size={14} className="text-[#48484A]" />
         <span className="text-[12px] text-[#48484A]">No device connected</span>
       </div>
-    </motion.div>
-  )
-
-  // 错误状态
-  const errorState = (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col items-center justify-center py-12 px-6 bg-[#1C1C1E] border border-[rgba(255,59,48,0.15)] rounded-[20px] mb-4">
-      <div className="w-12 h-12 rounded-xl bg-[rgba(255,59,48,0.1)] flex items-center justify-center mb-3">
-        <AlertTriangle size={24} className="text-[#FF3B30]" />
-      </div>
-      <p className="text-[14px] font-semibold text-[#FFFFFF] mb-1">Failed to load data</p>
-      <p className="text-[12px] text-[#8E8E93] text-center mb-4 max-w-[240px]">{historyError}</p>
-      <button
-        onClick={() => setRetryCount(c => c + 1)}
-        className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#01D6BE] text-[#000000] text-[13px] font-semibold hover:opacity-90 transition-opacity"
-      >
-        <RefreshCw size={14} />
-        Retry
-      </button>
     </motion.div>
   )
 
@@ -531,7 +511,7 @@ export default function StatsPage() {
                   Demo mode — connect device for real data
                 </span>
                 <button
-                  onClick={() => { setUseDemo(false); setRetryCount(c => c + 1); }}
+                  onClick={() => setRetryCount(c => c + 1)}
                   className="text-[11px] text-[#01D6BE] font-semibold hover:opacity-80 transition-opacity ml-1"
                 >
                   Retry
@@ -594,7 +574,7 @@ export default function StatsPage() {
                     </div>
                   </div>
 
-                  {isWeek ? (
+                  {period === 'Week' ? (
                     /* Week: Dual Bar Chart */
                     <div>
                       <div className="flex items-end gap-2 h-[140px]">

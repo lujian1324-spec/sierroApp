@@ -222,6 +222,8 @@ export default function SmartSchedulePage() {
     if (deleteConfirm.scheduleId) {
       deletePeakShavingSchedule(deleteConfirm.scheduleId)
       setExpandedSchedule(null)
+      // T18: 自动同步到 API
+      setTimeout(() => handleScheduleChanged(), 50)
     }
     setDeleteConfirm({ show: false, scheduleId: '', scheduleName: '' })
   }
@@ -306,7 +308,11 @@ export default function SmartSchedulePage() {
     }
   }
 
-  const toggleScheduleEnabled = (id: string, enabled: boolean) => updatePeakShavingSchedule(id, { enabled })
+  const toggleScheduleEnabled = (id: string, enabled: boolean) => {
+    updatePeakShavingSchedule(id, { enabled })
+    // T18: 自动同步到 API
+    setTimeout(() => handleScheduleChanged(), 50)
+  }
 
   // 24h 时间轴数据
   const timelineHours = Array.from({ length: 25 }, (_, i) => i) // 0-24
@@ -353,6 +359,58 @@ export default function SmartSchedulePage() {
 
       {/* Scrollable */}
       <div className="flex-1 overflow-y-auto scrollbar-hide px-5 pb-4">
+
+        {/* T18: API 连接状态 + 保存按钮 */}
+        <div className="mb-3 flex items-center gap-2">
+          {selectedDeviceId ? (
+            <>
+              {peakValleyLoading ? (
+                <div className="flex items-center gap-1.5 text-[11px] text-[#8E8E93] bg-[#1C1C1E] rounded-full px-3 py-1.5">
+                  <Loader2 size={12} className="animate-spin text-[#01D6BE]" />
+                  Loading config...
+                </div>
+              ) : peakValleyError ? (
+                <div className="flex items-center gap-1.5 text-[11px] text-[#FF9500] bg-[rgba(255,149,0,0.1)] rounded-full px-3 py-1.5">
+                  <CloudOff size={12} />
+                  Using cached settings
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 text-[11px] text-[#34C759] bg-[rgba(52,199,89,0.1)] rounded-full px-3 py-1.5">
+                  <Check size={12} />
+                  Synced to device
+                </div>
+              )}
+              <div className="flex-1" />
+              <button
+                onClick={handleRefresh}
+                disabled={peakValleyLoading}
+                className="w-8 h-8 rounded-full bg-[#1C1C1E] flex items-center justify-center text-[#8E8E93] hover:text-[#01D6BE] transition-colors disabled:opacity-40"
+                title="Refresh from device"
+              >
+                <RefreshCw size={14} className={peakValleyLoading ? 'animate-spin' : ''} />
+              </button>
+              <button
+                onClick={handleSaveToDevice}
+                disabled={peakValleySaving || peakValleyLoading}
+                className="flex items-center gap-1.5 h-8 px-3 rounded-full text-[11px] font-medium transition-colors
+                  bg-[rgba(1,214,190,0.12)] text-[#01D6BE] hover:bg-[rgba(1,214,190,0.2)] disabled:opacity-40"
+                title="Save settings to device"
+              >
+                {peakValleySaving ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : (
+                  <Save size={12} />
+                )}
+                Save to Device
+              </button>
+            </>
+          ) : (
+            <div className="flex items-center gap-1.5 text-[11px] text-[#48484A] bg-[#1C1C1E] rounded-full px-3 py-1.5">
+              <CloudOff size={12} />
+              Demo mode — no device selected
+            </div>
+          )}
+        </div>
 
         {/* Main Switch */}
         <motion.div
