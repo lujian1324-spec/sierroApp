@@ -16,6 +16,8 @@ import { tokenStore } from '../utils/apiClient'
 
 interface AuthState {
   isAuthenticated: boolean
+  /** 游客模式：跳过登录直接浏览（功能受限） */
+  isGuest: boolean
   user: LoginData | null
   loading: boolean
   error: string | null
@@ -27,6 +29,8 @@ interface AuthState {
   clearError: () => void
   /** 启动时静默恢复会话：验证 token → 必要时刷新 → 确定登录状态 */
   restoreSession: () => Promise<void>
+  /** 进入游客模式（跳过 API 登录） */
+  setGuestMode: () => void
 }
 
 /** 判断业务响应码是否成功 */
@@ -42,6 +46,7 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       isAuthenticated: isLoggedIn(),
+      isGuest: false,
       user: null,
       loading: false,
       error: null,
@@ -75,10 +80,14 @@ export const useAuthStore = create<AuthState>()(
 
       logout: async () => {
         await apiLogout()
-        set({ isAuthenticated: false, user: null, error: null, sessionReady: true })
+        set({ isAuthenticated: false, isGuest: false, user: null, error: null, sessionReady: true })
       },
 
       clearError: () => set({ error: null }),
+
+      setGuestMode: () => {
+        set({ isGuest: true, isAuthenticated: false, sessionReady: true, error: null })
+      },
 
       /**
        * 启动时静默恢复会话：
@@ -122,6 +131,7 @@ export const useAuthStore = create<AuthState>()(
       name: 'iot-auth',
       partialize: (state) => ({
         isAuthenticated: state.isAuthenticated,
+        isGuest: state.isGuest,
         user: state.user,
       }),
     }

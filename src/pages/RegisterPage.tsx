@@ -14,12 +14,14 @@ export default function RegisterPage() {
   const [cellphone, setCellphone] = useState('')
   const [countryCode, setCountryCode] = useState('+1')
   const [captcha, setCaptcha] = useState('')
+  const [captchaId, setCaptchaId] = useState<string | null>(null) // 发送验证码后返回的会话ID
   const [showPwd, setShowPwd] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [captchaSent, setCaptchaSent] = useState(false)
   const [captchaCooldown, setCaptchaCooldown] = useState(0)
+  const [agreed, setAgreed] = useState(false)
 
   const clearError = () => setError(null)
 
@@ -36,11 +38,18 @@ export default function RegisterPage() {
     }
 
     try {
+      let result
       if (mode === 'email') {
-        await sendEmailCaptcha(email.trim(), 'register')
+        result = await sendEmailCaptcha(email.trim(), '1')
       } else {
-        await sendSmsCaptcha(cellphone.trim(), countryCode, 'register')
+        result = await sendSmsCaptcha(cellphone.trim(), countryCode, '1')
       }
+      // 提取 iotCaptchaId（API 返回在 data.iotCaptchaId 中）
+      const cid = result.data?.iotCaptchaId
+      if (cid) {
+        setCaptchaId(cid)
+      }
+      // 即使没有显式 captchaId（某些平台隐式跟踪），标记已发送
       setCaptchaSent(true)
       setCaptchaCooldown(60)
       const timer = setInterval(() => {
@@ -51,6 +60,7 @@ export default function RegisterPage() {
       }, 1000)
     } catch (err) {
       setError('Failed to send verification code. Please try again.')
+      console.error('[RegisterPage] sendCaptcha failed:', err)
     }
   }
 
@@ -75,7 +85,8 @@ export default function RegisterPage() {
           account.trim(),
           password,
           email.trim(),
-          captcha || undefined
+          captcha || undefined,
+          captchaId || undefined
         )
         if (result.code === 0 || result.code === '0') {
           setSuccess(true)
@@ -88,7 +99,8 @@ export default function RegisterPage() {
           password,
           cellphone.trim(),
           countryCode,
-          captcha || undefined
+          captcha || undefined,
+          captchaId || undefined
         )
         if (result.code === 0 || result.code === '0') {
           setSuccess(true)
@@ -338,10 +350,51 @@ export default function RegisterPage() {
           </motion.div>
         )}
 
+        {/* Terms & Privacy */}
+        <div className="flex items-start gap-2.5">
+          <button
+            type="button"
+            onClick={() => setAgreed(v => !v)}
+            className={`mt-0.5 w-4.5 h-4.5 flex-shrink-0 rounded-[4px] border transition-colors flex items-center justify-center
+              ${agreed
+                ? 'bg-[#01D6BE] border-[#01D6BE]'
+                : 'bg-transparent border-[#48484A]'
+              }`}
+            aria-checked={agreed}
+            role="checkbox"
+          >
+            {agreed && (
+              <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                <path d="M1 4L3.5 6.5L9 1" stroke="#000000" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            )}
+          </button>
+          <p className="text-[11px] leading-relaxed text-[#8E8E93]">
+            I agree to the{' '}
+            <a
+              href="https://solar.siseli.com/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#01D6BE] underline underline-offset-2 hover:text-[#00E5CA] transition-colors"
+            >
+              Terms of Use
+            </a>
+            {' '}and{' '}
+            <a
+              href="https://solar.siseli.com/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#01D6BE] underline underline-offset-2 hover:text-[#00E5CA] transition-colors"
+            >
+              Privacy Policy
+            </a>
+          </p>
+        </div>
+
         {/* 提交按钮 */}
         <button
           type="submit"
-          disabled={loading || !account.trim() || !password.trim()}
+          disabled={loading || !account.trim() || !password.trim() || !agreed}
           className="w-full py-3.5 rounded-xl font-semibold text-[14px]
             bg-[#01D6BE] text-[#000000]
             disabled:opacity-40 disabled:cursor-not-allowed
@@ -358,10 +411,6 @@ export default function RegisterPage() {
         </button>
       </motion.form>
 
-      {/* 底部说明 */}
-      <p className="mt-6 text-[11px] text-[#48484A] text-center leading-relaxed">
-        By creating an account, you agree to our Terms of Service and Privacy Policy.
-      </p>
     </div>
   )
 }

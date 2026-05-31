@@ -17,10 +17,11 @@ import { ToastContainer, useToast } from './components/Toast'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { Zap, Loader2 } from 'lucide-react'
 
-/** 路由守卫：未登录跳转到 /login */
+/** 路由守卫：未登录且非游客则跳转到 /login */
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore(s => s.isAuthenticated)
-  if (!isAuthenticated) {
+  const isGuest = useAuthStore(s => s.isGuest)
+  if (!isAuthenticated && !isGuest) {
     return <Navigate to="/login" replace />
   }
   return <>{children}</>
