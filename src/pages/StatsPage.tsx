@@ -473,7 +473,7 @@ export default function StatsPage() {
                   title: 'Sierro Energy Stats',
                   text: `CO2 Reduced: ${chartFrame.co2Kg} kg`,
                   url: window.location.href,
-                }).catch(() => {})
+                }).catch(err => console.error('[StatsPage] Share failed:', err))
               }
             }}
           >

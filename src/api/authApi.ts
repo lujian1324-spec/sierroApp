@@ -301,3 +301,17 @@ export async function deleteAccount(): Promise<ApiResponse<unknown>> {
 export function isLoggedIn(): boolean {
   return !!tokenStore.get()
 }
+
+/**
+ * 验证当前会话是否有效（轻量级检查）
+ * - 调用 fetchUserInfo 验证 token 是否过期
+ * - 用于 App 启动时静默恢复会话
+ */
+export async function verifySession(): Promise<boolean> {
+  try {
+    const result = await fetchUserInfo()
+    return result.code === 0 || result.code === '0'
+  } catch {
+    return false
+  }
+}

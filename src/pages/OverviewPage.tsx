@@ -730,7 +730,7 @@ export default function OverviewPage() {
                         const newValue = !port.enabled
                         setControlLoading(port.key)
                         controlDevice(selectedDeviceId, port.key, newValue)
-                          .catch(() => {})
+                          .catch(err => console.error('[OverviewPage] controlDevice failed:', err))
                           .finally(() => setControlLoading(null))
                       }}
                       size="sm"

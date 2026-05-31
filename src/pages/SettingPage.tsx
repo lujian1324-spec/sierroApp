@@ -67,7 +67,7 @@ export default function SettingPage() {
   const [pushLowBattery, setPushLowBattery] = useState(settings.pushNotifications)
 
   useEffect(() => {
-    getUserProfile().then(p => { if (p) setUserProfile(p) }).catch(() => {})
+    getUserProfile().then(p => { if (p) setUserProfile(p) }).catch(err => console.error('[SettingPage] getUserProfile failed:', err))
   }, [])
 
   const handleSupportSubmit = (e: React.FormEvent) => {

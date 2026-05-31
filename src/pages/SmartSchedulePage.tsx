@@ -160,7 +160,7 @@ export default function SmartSchedulePage() {
   const handleScheduleChanged = useCallback(() => {
     if (selectedDeviceId && apiConfigLoaded) {
       const config = mapSettingsToGeneralConfig(Number(selectedDeviceId), { ...peakShavingSettings })
-      savePeakValleyGeneral(config).catch(() => {})
+      savePeakValleyGeneral(config).catch(err => console.error('[SmartSchedulePage] save failed:', err))
     }
   }, [selectedDeviceId, apiConfigLoaded, peakShavingSettings, savePeakValleyGeneral])
 

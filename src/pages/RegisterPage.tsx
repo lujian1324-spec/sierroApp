@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Zap, User, Lock, Mail, Eye, EyeOff, AlertCircle, Loader2, ArrowLeft, Phone } from 'lucide-react'
-import { registerByEmail, registerByCellphone, checkAccountExists, sendEmailCaptcha, md5Password } from '../api/authApi'
+import { registerByEmail, registerByCellphone, checkAccountExists, sendEmailCaptcha, sendSmsCaptcha, md5Password } from '../api/authApi'
 
 type RegisterMode = 'email' | 'cellphone'
 
@@ -39,7 +39,6 @@ export default function RegisterPage() {
       if (mode === 'email') {
         await sendEmailCaptcha(email.trim(), 'register')
       } else {
-        const { sendSmsCaptcha } = await import('../api/authApi')
         await sendSmsCaptcha(cellphone.trim(), countryCode, 'register')
       }
       setCaptchaSent(true)
