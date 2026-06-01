@@ -176,6 +176,40 @@ export default function OverviewPage() {
   const solarPower = realtime?.solarPower ?? 0
   const outputPower = realtime?.outputPower ?? 0
   const batteryTemp = realtime?.batteryTemp ?? 0
+
+  // ─── 预估剩余时间 ───
+  const remainingTimeDisplay = useMemo(() => {
+    if (soc <= 0 || outputPower <= 0) return null
+    // Default capacity: 1kWh (Sierro 1000) or 2kWh (Sierro 2000)
+    const modelLower = deviceModel?.toLowerCase() ?? ''
+    const capacityWh = modelLower.includes('2000') ? 2000 : 1000
+    const remainingWh = (soc / 100) * capacityWh
+    const hours = remainingWh / outputPower
+    if (hours >= 1) {
+      const h = Math.floor(hours)
+      const m = Math.round((hours - h) * 60)
+      return `${h}h ${m}m remaining`
+    }
+    const m = Math.round(hours * 60)
+    if (m <= 0) return null
+    return `${m}m remaining`
+  }, [soc, outputPower, deviceModel])
+
+  const chargeTimeDisplay = useMemo(() => {
+    if (soc >= 100 || inputPower <= 0) return null
+    const modelLower = deviceModel?.toLowerCase() ?? ''
+    const capacityWh = modelLower.includes('2000') ? 2000 : 1000
+    const toChargeWh = ((100 - soc) / 100) * capacityWh
+    const hours = toChargeWh / inputPower
+    if (hours >= 1) {
+      const h = Math.floor(hours)
+      const m = Math.round((hours - h) * 60)
+      return `${h}h ${m}m to full`
+    }
+    const m = Math.round(hours * 60)
+    if (m <= 0) return null
+    return `${m}m to full`
+  }, [soc, inputPower, deviceModel])
   const acOut1Enable = realtime?.acOut1Enable ?? false
   const acOut2Enable = realtime?.acOut2Enable ?? false
   const usbOut1Enable = realtime?.usbOut1Enable ?? false
@@ -414,16 +448,16 @@ export default function OverviewPage() {
           </div>
         ) : (
           <>
-            {/* Online/Offline status badge */}
+            {/* Connected / Disconnected status badge */}
             <div className="mx-5 mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {isOnline ? (
-                  <span className="text-[11px] text-[#34C759] flex items-center gap-1">
-                    <Wifi size={11} /> Online
+                  <span className="text-[10px] px-2.5 py-1 rounded-full bg-[rgba(13,148,136,0.12)] text-[#0D9488] font-semibold flex items-center gap-1">
+                    <Wifi size={10} /> Connected
                   </span>
                 ) : (
-                  <span className="text-[11px] text-[#48484A] flex items-center gap-1">
-                    <WifiOff size={11} /> Offline
+                  <span className="text-[10px] px-2.5 py-1 rounded-full bg-[rgba(255,59,48,0.12)] text-[#FF3B30] font-semibold flex items-center gap-1">
+                    <WifiOff size={10} /> Disconnected
                   </span>
                 )}
                 {deviceModel && (
@@ -482,20 +516,27 @@ export default function OverviewPage() {
                 <BatteryRing
                   percentage={soc}
                   isCharging={isCharging}
-                  timeToFull={isCharging ? '--' : ''}
+                  timeToFull={chargeTimeDisplay ?? '--'}
                 />
               </div>
 
-              {/* Remaining info */}
+              {/* Remaining time / Charging info */}
               <div className="text-center mb-4">
-                <span className="text-[12px] text-[#8E8E93]">
-                  {isCharging
-                    ? `Charging ${Math.abs(batteryPower)}W`
-                    : outputPower > 0
-                      ? `Outputting ${outputPower}W`
-                      : 'Idle'
-                  }
-                </span>
+                {isCharging ? (
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span className="text-[13px] font-semibold text-[#0D9488]">{chargeTimeDisplay}</span>
+                    <span className="text-[11px] text-[#8E8E93]">{Math.abs(batteryPower)}W charging</span>
+                  </div>
+                ) : outputPower > 0 ? (
+                  <div className="flex flex-col items-center gap-0.5">
+                    {remainingTimeDisplay && (
+                      <span className="text-[13px] font-semibold text-[#FFFFFF]">{remainingTimeDisplay}</span>
+                    )}
+                    <span className="text-[11px] text-[#8E8E93]">{outputPower}W output</span>
+                  </div>
+                ) : (
+                  <span className="text-[12px] text-[#8E8E93]">Idle</span>
+                )}
               </div>
 
               {/* Battery / AC / Solar / Output 4 cards */}

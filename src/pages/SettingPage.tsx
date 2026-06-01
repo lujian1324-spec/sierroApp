@@ -63,6 +63,7 @@ export default function SettingPage() {
   // Push notification settings
   const [pushOutage, setPushOutage] = useState(settings.pushNotifications)
   const [pushLowBattery, setPushLowBattery] = useState(settings.pushNotifications)
+  const [lowBatteryThreshold, setLowBatteryThreshold] = useState(settings.lowBatteryThreshold ?? 30)
 
   useEffect(() => {
     getUserProfile().then(p => { if (p) setUserProfile(p) }).catch(err => console.error('[SettingPage] getUserProfile failed:', err))
@@ -161,10 +162,61 @@ export default function SettingPage() {
             </div>
             <div className="flex-1">
               <div className="text-[13px] font-semibold text-[#FFFFFF]">Low Battery</div>
-              <div className="text-[11px] text-[#8E8E93] mt-0.5">Receive alerts below 30% battery</div>
+              <div className="text-[11px] text-[#8E8E93] mt-0.5">Receive alerts below {lowBatteryThreshold}% battery</div>
             </div>
             <ToggleSwitch isOn={pushLowBattery} onToggle={() => { setPushLowBattery(!pushLowBattery); updateSettings({ pushNotifications: !pushLowBattery }) }} size="sm" />
           </div>
+          {/* Low Battery Threshold Slider — shown when enabled */}
+          <AnimatePresence>
+            {pushLowBattery && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="px-4 pb-4 pt-1 border-t border-[rgba(255,149,0,0.06)]">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] text-[#8E8E93]">Alert Threshold</span>
+                    <span className="text-[11px] font-semibold text-[#FF9500]">{lowBatteryThreshold}%</span>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="range"
+                      min="10"
+                      max="30"
+                      step="10"
+                      value={lowBatteryThreshold}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value)
+                        setLowBatteryThreshold(val)
+                        updateSettings({ lowBatteryThreshold: val })
+                      }}
+                      className="w-full h-1.5 bg-[#2C2C2E] rounded-full appearance-none cursor-pointer accent-[#FF9500]"
+                      style={{
+                        background: `linear-gradient(to right, #FF9500 0%, #FF9500 ${((lowBatteryThreshold - 10) / 20) * 100}%, #2C2C2E ${((lowBatteryThreshold - 10) / 20) * 100}%, #2C2C2E 100%)`
+                      }}
+                    />
+                    {/* Tick marks */}
+                    <div className="flex justify-between px-0.5 mt-1">
+                      {[10, 20, 30].map((val) => (
+                        <button
+                          key={val}
+                          onClick={() => {
+                            setLowBatteryThreshold(val)
+                            updateSettings({ lowBatteryThreshold: val })
+                          }}
+                          className={`text-[9px] transition-colors ${lowBatteryThreshold === val ? 'text-[#FF9500] font-semibold' : 'text-[#48484A]'}`}
+                        >
+                          {val}%
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
 
         {/* Founder Badge */}
