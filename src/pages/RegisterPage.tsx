@@ -1,21 +1,16 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Zap, User, Lock, Mail, Eye, EyeOff, AlertCircle, Loader2, ArrowLeft, Phone } from 'lucide-react'
-import { registerByEmail, registerByCellphone, sendEmailCaptcha, sendSmsCaptcha } from '../api/authApi'
-
-type RegisterMode = 'email' | 'cellphone'
+import { Zap, User, Lock, Mail, Eye, EyeOff, AlertCircle, Loader2, ArrowLeft } from 'lucide-react'
+import { registerByEmail, sendEmailCaptcha } from '../api/authApi'
 
 export default function RegisterPage() {
-  const [mode, setMode] = useState<RegisterMode>('email')
   const [account, setAccount] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [email, setEmail] = useState('')
-  const [cellphone, setCellphone] = useState('')
-  const [countryCode, setCountryCode] = useState('+1')
   const [captcha, setCaptcha] = useState('')
-  const [captchaId, setCaptchaId] = useState<string | null>(null) // 发送验证码后返回的会话ID
+  const [captchaId, setCaptchaId] = useState<string | null>(null)
   const [showPwd, setShowPwd] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -25,31 +20,20 @@ export default function RegisterPage() {
 
   const clearError = () => setError(null)
 
-  // 发送验证码
+  // 发送验证码（仅邮箱）
   const handleSendCaptcha = async () => {
     if (captchaCooldown > 0) return
-    if (mode === 'email' && !email.trim()) {
+    if (!email.trim()) {
       setError('Please enter your email address')
-      return
-    }
-    if (mode === 'cellphone' && !cellphone.trim()) {
-      setError('Please enter your phone number')
       return
     }
 
     try {
-      let result
-      if (mode === 'email') {
-        result = await sendEmailCaptcha(email.trim(), '1')
-      } else {
-        result = await sendSmsCaptcha(cellphone.trim(), countryCode, '1')
-      }
-      // 提取 iotCaptchaId（API 返回在 data.iotCaptchaId 中）
+      const result = await sendEmailCaptcha(email.trim(), '1')
       const cid = result.data?.iotCaptchaId
       if (cid) {
         setCaptchaId(cid)
       }
-      // 即使没有显式 captchaId（某些平台隐式跟踪），标记已发送
       setCaptchaSent(true)
       setCaptchaCooldown(60)
       const timer = setInterval(() => {
@@ -64,49 +48,31 @@ export default function RegisterPage() {
     }
   }
 
-  // 注册提交
+  // 注册提交（仅邮箱）
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     clearError()
 
-    // 验证
     if (!account.trim()) { setError('Please enter an account name'); return }
     if (account.trim().length < 3) { setError('Account must be at least 3 characters'); return }
     if (!password.trim()) { setError('Please enter a password'); return }
     if (password.length < 6) { setError('Password must be at least 6 characters'); return }
     if (password !== confirmPassword) { setError('Passwords do not match'); return }
-    if (mode === 'email' && !email.trim()) { setError('Please enter your email'); return }
-    if (mode === 'cellphone' && !cellphone.trim()) { setError('Please enter your phone number'); return }
+    if (!email.trim()) { setError('Please enter your email'); return }
 
     setLoading(true)
     try {
-      if (mode === 'email') {
-        const result = await registerByEmail(
-          account.trim(),
-          password,
-          email.trim(),
-          captcha || undefined,
-          captchaId || undefined
-        )
-        if (result.code === 0 || result.code === '0') {
-          setSuccess(true)
-        } else {
-          setError(result.message ?? result.msg ?? 'Registration failed')
-        }
+      const result = await registerByEmail(
+        account.trim(),
+        password,
+        email.trim(),
+        captcha || undefined,
+        captchaId || undefined
+      )
+      if (result.code === 0 || result.code === '0') {
+        setSuccess(true)
       } else {
-        const result = await registerByCellphone(
-          account.trim(),
-          password,
-          cellphone.trim(),
-          countryCode,
-          captcha || undefined,
-          captchaId || undefined
-        )
-        if (result.code === 0 || result.code === '0') {
-          setSuccess(true)
-        } else {
-          setError(result.message ?? result.msg ?? 'Registration failed')
-        }
+        setError(result.message ?? result.msg ?? 'Registration failed')
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Network error')
@@ -165,24 +131,6 @@ export default function RegisterPage() {
         <p className="text-[13px] text-[#8E8E93] mt-1">Sign up to start managing your devices</p>
       </motion.div>
 
-      {/* 注册模式切换 */}
-      <div className="flex gap-2 mb-6">
-        {(['email', 'cellphone'] as const).map(m => (
-          <button
-            key={m}
-            onClick={() => { setMode(m); clearError() }}
-            className={`flex-1 py-2.5 rounded-xl text-[13px] font-medium transition-all flex items-center justify-center gap-1.5
-              ${mode === m
-                ? 'bg-[rgba(13,148,136,0.12)] border border-[rgba(13,148,136,0.3)] text-[#0D9488]'
-                : 'bg-[#1C1C1E] border border-transparent text-[#8E8E93]'
-              }`}
-          >
-            {m === 'email' ? <Mail size={14} /> : <Phone size={14} />}
-            {m === 'email' ? 'Email' : 'Phone'}
-          </button>
-        ))}
-      </div>
-
       {/* 表单 */}
       <motion.form
         initial={{ opacity: 0, y: 20 }}
@@ -209,59 +157,23 @@ export default function RegisterPage() {
           />
         </div>
 
-        {/* 邮箱/手机 */}
-        {mode === 'email' ? (
-          <div>
-            <label className="text-[11px] font-semibold text-[#8E8E93] mb-1.5 flex items-center gap-1.5">
-              <Mail size={12} />
-              Email Address
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => { setEmail(e.target.value); clearError() }}
-              placeholder="Enter your email"
-              autoComplete="email"
-              className="w-full px-4 py-3 rounded-xl bg-[#1C1C1E] border border-[rgba(13,148,136,0.15)]
-                text-[#FFFFFF] text-[14px] placeholder:text-[#48484A]
-                focus:outline-none focus:border-[rgba(13,148,136,0.5)] transition-colors"
-            />
-          </div>
-        ) : (
-          <div>
-            <label className="text-[11px] font-semibold text-[#8E8E93] mb-1.5 flex items-center gap-1.5">
-              <Phone size={12} />
-              Phone Number
-            </label>
-            <div className="flex gap-2">
-              <select
-                value={countryCode}
-                onChange={e => setCountryCode(e.target.value)}
-                className="px-3 py-3 rounded-xl bg-[#1C1C1E] border border-[rgba(13,148,136,0.15)]
-                  text-[#FFFFFF] text-[14px] focus:outline-none focus:border-[rgba(13,148,136,0.5)]"
-              >
-                <option value="+1">+1</option>
-                <option value="+86">+86</option>
-                <option value="+44">+44</option>
-                <option value="+81">+81</option>
-                <option value="+82">+82</option>
-                <option value="+61">+61</option>
-                <option value="+49">+49</option>
-                <option value="+33">+33</option>
-              </select>
-              <input
-                type="tel"
-                value={cellphone}
-                onChange={e => { setCellphone(e.target.value); clearError() }}
-                placeholder="Enter your phone number"
-                autoComplete="tel"
-                className="flex-1 px-4 py-3 rounded-xl bg-[#1C1C1E] border border-[rgba(13,148,136,0.15)]
-                  text-[#FFFFFF] text-[14px] placeholder:text-[#48484A]
-                  focus:outline-none focus:border-[rgba(13,148,136,0.5)] transition-colors"
-              />
-            </div>
-          </div>
-        )}
+        {/* 邮箱地址 */}
+        <div>
+          <label className="text-[11px] font-semibold text-[#8E8E93] mb-1.5 flex items-center gap-1.5">
+            <Mail size={12} />
+            Email Address
+          </label>
+          <input
+            type="email"
+            value={email}
+            onChange={e => { setEmail(e.target.value); clearError() }}
+            placeholder="Enter your email"
+            autoComplete="email"
+            className="w-full px-4 py-3 rounded-xl bg-[#1C1C1E] border border-[rgba(13,148,136,0.15)]
+              text-[#FFFFFF] text-[14px] placeholder:text-[#48484A]
+              focus:outline-none focus:border-[rgba(13,148,136,0.5)] transition-colors"
+          />
+        </div>
 
         {/* 验证码 */}
         <div>
@@ -282,7 +194,7 @@ export default function RegisterPage() {
             <button
               type="button"
               onClick={handleSendCaptcha}
-              disabled={captchaCooldown > 0 || (mode === 'email' ? !email.trim() : !cellphone.trim())}
+              disabled={captchaCooldown > 0 || !email.trim()}
               className="px-4 py-3 rounded-xl text-[13px] font-medium whitespace-nowrap
                 bg-[rgba(13,148,136,0.12)] text-[#0D9488] border border-[rgba(13,148,136,0.2)]
                 disabled:opacity-40 disabled:cursor-not-allowed"
@@ -387,7 +299,6 @@ export default function RegisterPage() {
           )}
         </button>
       </motion.form>
-
     </div>
   )
 }
