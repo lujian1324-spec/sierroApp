@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Zap, Mail, User, Lock, Eye, EyeOff, Loader2, ChevronRight, ArrowRight, ArrowLeft } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
@@ -119,9 +119,9 @@ export default function LoginPage() {
           transition={{ duration: 0.5 }}
           className="mb-10 flex flex-col items-center gap-3"
         >
-          <div className="w-16 h-16 rounded-[22px] bg-[rgba(1,214,190,0.12)] border border-[rgba(1,214,190,0.3)]
+          <div className="w-16 h-16 rounded-[22px] bg-[rgba(13,148,136,0.12)] border border-[rgba(13,148,136,0.3)]
             flex items-center justify-center">
-            <Zap size={32} className="text-[#01D6BE]" />
+            <Zap size={32} className="text-[#0D9488]" />
           </div>
           <div className="text-center">
             <h1 className="text-2xl font-bold text-[#FFFFFF]">Sierro</h1>
@@ -169,15 +169,15 @@ export default function LoginPage() {
                     placeholder="you@example.com"
                     autoComplete="email"
                     autoFocus
-                    className="flex-1 px-4 py-3 rounded-xl bg-[#1C1C1E] border border-[rgba(1,214,190,0.15)]
+                    className="flex-1 px-4 py-3 rounded-xl bg-[#1C1C1E] border border-[rgba(13,148,136,0.15)]
                       text-[#FFFFFF] text-[14px] placeholder:text-[#48484A]
-                      focus:outline-none focus:border-[rgba(1,214,190,0.5)] transition-colors"
+                      focus:outline-none focus:border-[rgba(13,148,136,0.5)] transition-colors"
                   />
                   <button
                     onClick={handleSendEmailCode}
                     disabled={emailSending || emailCooldown > 0 || !email.trim()}
                     className="px-4 py-3 rounded-xl text-[13px] font-semibold whitespace-nowrap
-                      bg-[#01D6BE] text-[#000000]
+                      bg-[#0D9488] text-[#000000]
                       disabled:opacity-40 disabled:cursor-not-allowed
                       active:scale-[0.97] transition-all min-w-[80px]"
                   >
@@ -206,9 +206,9 @@ export default function LoginPage() {
                   placeholder="Enter 6-digit code"
                   maxLength={6}
                   autoComplete="one-time-code"
-                  className="w-full px-4 py-3 rounded-xl bg-[#1C1C1E] border border-[rgba(1,214,190,0.15)]
+                  className="w-full px-4 py-3 rounded-xl bg-[#1C1C1E] border border-[rgba(13,148,136,0.15)]
                     text-[#FFFFFF] text-[14px] placeholder:text-[#48484A] tracking-[0.3em] text-center
-                    focus:outline-none focus:border-[rgba(1,214,190,0.5)] transition-colors"
+                    focus:outline-none focus:border-[rgba(13,148,136,0.5)] transition-colors"
                 />
               </div>
 
@@ -231,7 +231,7 @@ export default function LoginPage() {
                 onClick={handleEmailLogin}
                 disabled={emailLoggingIn || !emailIotCaptchaId || !emailCode.trim()}
                 className="w-full py-3.5 rounded-xl font-semibold text-[14px]
-                  bg-[#01D6BE] text-[#000000]
+                  bg-[#0D9488] text-[#000000]
                   disabled:opacity-40 disabled:cursor-not-allowed
                   active:scale-[0.98] transition-all flex items-center justify-center gap-2"
               >
@@ -279,9 +279,9 @@ export default function LoginPage() {
                     onChange={e => { setAccount(e.target.value); clearError() }}
                     placeholder="Username or email"
                     autoComplete="username"
-                    className="w-full px-4 py-3 rounded-xl bg-[#1C1C1E] border border-[rgba(1,214,190,0.15)]
+                    className="w-full px-4 py-3 rounded-xl bg-[#1C1C1E] border border-[rgba(13,148,136,0.15)]
                       text-[#FFFFFF] text-[14px] placeholder:text-[#48484A]
-                      focus:outline-none focus:border-[rgba(1,214,190,0.5)] transition-colors"
+                      focus:outline-none focus:border-[rgba(13,148,136,0.5)] transition-colors"
                   />
                 </div>
 
@@ -298,9 +298,9 @@ export default function LoginPage() {
                       onChange={e => { setPassword(e.target.value); clearError() }}
                       placeholder="Enter your password"
                       autoComplete="current-password"
-                      className="w-full px-4 py-3 pr-11 rounded-xl bg-[#1C1C1E] border border-[rgba(1,214,190,0.15)]
+                      className="w-full px-4 py-3 pr-11 rounded-xl bg-[#1C1C1E] border border-[rgba(13,148,136,0.15)]
                         text-[#FFFFFF] text-[14px] placeholder:text-[#48484A]
-                        focus:outline-none focus:border-[rgba(1,214,190,0.5)] transition-colors"
+                        focus:outline-none focus:border-[rgba(13,148,136,0.5)] transition-colors"
                     />
                     <button
                       type="button"
@@ -331,7 +331,7 @@ export default function LoginPage() {
                   type="submit"
                   disabled={loading || !account.trim() || !password.trim()}
                   className="w-full py-3.5 rounded-xl font-semibold text-[14px]
-                    bg-[#01D6BE] text-[#000000]
+                    bg-[#0D9488] text-[#000000]
                     disabled:opacity-40 disabled:cursor-not-allowed
                     active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                 >
@@ -393,10 +393,10 @@ export default function LoginPage() {
                 <button
                   onClick={() => setEmailFlow(true)}
                   disabled={loading}
-                  className="w-full py-3.5 rounded-[14px] bg-[#1C1C1E] border border-[rgba(1,214,190,0.12)] text-[#FFFFFF] text-[14px] font-medium
+                  className="w-full py-3.5 rounded-[14px] bg-[#1C1C1E] border border-[rgba(13,148,136,0.12)] text-[#FFFFFF] text-[14px] font-medium
                     flex items-center justify-center gap-3 active:scale-[0.98] transition-transform"
                 >
-                  <Mail size={18} className="text-[#01D6BE]" />
+                  <Mail size={18} className="text-[#0D9488]" />
                   Sign In with Email Code
                 </button>
               </div>
@@ -416,7 +416,7 @@ export default function LoginPage() {
           {/* Sign Up link */}
           <button
             onClick={() => navigate('/register')}
-            className="text-[14px] text-[#01D6BE] font-medium
+            className="text-[14px] text-[#0D9488] font-medium
               flex items-center justify-center gap-1 mx-auto hover:opacity-80 transition-opacity"
           >
             <span>Don&apos;t have an account?</span>
@@ -439,11 +439,15 @@ export default function LoginPage() {
           </div>
 
           {/* Terms & Privacy */}
-          <p className="text-[11px] text-[#48484A] leading-relaxed">
+          <p className="text-[11px] leading-relaxed text-[#8E8E93]">
             By continuing, you agree to our{' '}
-            <span className="text-[#8E8E93]">Terms of Use</span>
+            <Link to="/terms" className="text-[#0D9488] underline underline-offset-2 hover:text-[#14B8A6] transition-colors">
+              Terms of Use
+            </Link>
             {' '}and{' '}
-            <span className="text-[#8E8E93]">Privacy Policy</span>
+            <Link to="/privacy" className="text-[#0D9488] underline underline-offset-2 hover:text-[#14B8A6] transition-colors">
+              Privacy Policy
+            </Link>
           </p>
         </motion.div>
       )}

@@ -9,6 +9,8 @@ import StatsPage from './pages/StatsPage'
 import SettingPage from './pages/SettingPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+import TermsPage from './pages/TermsPage'
+import PrivacyPage from './pages/PrivacyPage'
 import SmartSchedulePage from './pages/SmartSchedulePage'
 import NotificationsPage from './pages/NotificationsPage'
 import { useRealtimeSimulator } from './hooks/useRealtimeSimulator'
@@ -43,11 +45,11 @@ function SessionLoadingScreen() {
   return (
     <div className="min-h-screen bg-[#000000] flex items-center justify-center">
       <div className="flex flex-col items-center gap-4">
-        <div className="w-16 h-16 rounded-[22px] bg-[rgba(1,214,190,0.12)] border border-[rgba(1,214,190,0.3)]
+        <div className="w-16 h-16 rounded-[22px] bg-[rgba(13,148,136,0.12)] border border-[rgba(13,148,136,0.3)]
           flex items-center justify-center">
-          <Zap size={32} className="text-[#01D6BE]" />
+          <Zap size={32} className="text-[#0D9488]" />
         </div>
-        <Loader2 size={20} className="animate-spin text-[#01D6BE]" />
+        <Loader2 size={20} className="animate-spin text-[#0D9488]" />
         <p className="text-[13px] text-[#8E8E93]">Restoring session...</p>
       </div>
     </div>
@@ -72,7 +74,7 @@ function AppInner() {
   }
 
   // 登录/注册页单独渲染，不包含底部导航
-  if (location.pathname === '/login' || location.pathname === '/register') {
+  if (location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/terms' || location.pathname === '/privacy') {
     return (
       <AnimatePresence mode="wait">
         <motion.div
@@ -91,6 +93,8 @@ function AppInner() {
               path="/register"
               element={isAuthenticated ? <Navigate to="/" replace /> : <RegisterPage />}
             />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
           </Routes>
         </motion.div>
       </AnimatePresence>

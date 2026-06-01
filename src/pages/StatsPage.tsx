@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { Share2, BarChart3, WifiOff, Leaf, AlertTriangle, RefreshCw } from 'lucide-react'
-import BatteryRing from '../components/BatteryRing'
+import { Share2, BarChart3, WifiOff, Leaf, AlertTriangle, RefreshCw, ChevronLeft, ChevronRight, Trees } from 'lucide-react'
 import { useDeviceStore } from '../stores/deviceStore'
 import { fetchHistoryData, mapFieldsToRealtime, type HistoryDataResponse } from '../api/deviceApi'
 
@@ -232,7 +231,7 @@ function getDemoChartFrame(period: Period): ChartFrame {
 function ChartSkeleton() {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-      className="bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] rounded-[20px] p-5 mb-4">
+      className="bg-[#1C1C1E] border border-[rgba(13,148,136,0.08)] rounded-[20px] p-5 mb-4">
       <div className="flex items-center gap-2 mb-3">
         <div className="w-8 h-8 rounded-lg bg-[rgba(255,255,255,0.05)] animate-pulse" />
         <div className="h-4 w-24 bg-[rgba(255,255,255,0.05)] rounded animate-pulse" />
@@ -246,7 +245,7 @@ function ChartSkeleton() {
 function ChartAreaSkeleton() {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-      className="bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] rounded-[20px] p-4 mb-4">
+      className="bg-[#1C1C1E] border border-[rgba(13,148,136,0.08)] rounded-[20px] p-4 mb-4">
       <div className="h-4 w-28 bg-[rgba(255,255,255,0.05)] rounded animate-pulse mb-4" />
       <div className="h-[140px] bg-[rgba(255,255,255,0.02)] rounded-[14px] animate-pulse" />
     </motion.div>
@@ -258,7 +257,7 @@ function ChartAreaSkeleton() {
 function ChartEmptyState({ message }: { message: string }) {
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col items-center justify-center py-12 px-6 bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] rounded-[20px] mb-4">
+      className="flex flex-col items-center justify-center py-12 px-6 bg-[#1C1C1E] border border-[rgba(13,148,136,0.08)] rounded-[20px] mb-4">
       <div className="w-14 h-14 rounded-2xl bg-[rgba(255,255,255,0.03)] flex items-center justify-center mb-3">
         <BarChart3 size={28} className="text-[#48484A]" />
       </div>
@@ -451,26 +450,46 @@ export default function StatsPage() {
       />
     ) : null
 
+  // 日期范围显示
+  const dateRangeDisplay = useMemo(() => {
+    const now = new Date()
+    const fmtDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    const fmtMonth = (d: Date) => d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    const fmtShort = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    switch (period) {
+      case 'Day': return fmtDate(now)
+      case 'Week': {
+        const start = new Date(now)
+        start.setDate(start.getDate() - 6)
+        return `${fmtShort(start)} – ${fmtShort(now)}`
+      }
+      case 'Month': return fmtMonth(now)
+      case 'Range': {
+        const start = new Date(now)
+        start.setDate(start.getDate() - 90)
+        return `${fmtDate(start)} − ${fmtDate(now)}`
+      }
+    }
+  }, [period])
+
+  // 图表交互状态
+  const [chartTooltip, setChartTooltip] = useState<{ x: number; input: number; output: number; label: string } | null>(null)
+  const chartContainerRef = useRef<HTMLDivElement>(null)
+
   return (
     <div className="h-full flex flex-col bg-[#000000] overflow-hidden pt-6">
-      {/* Header */}
-      <div className="px-5 pt-8 pb-2 safe-area-top flex justify-between items-start">
-        <div>
-          <h2 className="text-xl font-bold text-[#FFFFFF]">Energy Stats</h2>
-          <p className="text-xs text-[#8E8E93] mt-1">
-            {deviceDays > 0
-              ? `${deviceDays} Days · ${deviceName ?? 'Device'}`
-              : (deviceName ? `${deviceName}` : 'Select a device')
-            }
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+      {/* Header — Handoff P114: "Insights" with days counter */}
+      <div className="px-5 pt-8 pb-1 safe-area-top">
+        <div className="flex justify-between items-start mb-3">
+          <div>
+            <h2 className="text-xl font-bold text-[#FFFFFF]">Insights</h2>
+          </div>
           <button
-            className="w-9 h-9 flex items-center justify-center rounded-full bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] text-[#8E8E93] hover:text-[#01D6BE] transition-colors"
+            className="w-9 h-9 flex items-center justify-center rounded-full bg-[#1C1C1E] border border-[rgba(13,148,136,0.08)] text-[#8E8E93] hover:text-[#0D9488] transition-colors"
             onClick={() => {
               if (navigator.share && chartFrame) {
                 navigator.share({
-                  title: 'Sierro Energy Stats',
+                  title: 'Sierro Energy Insights',
                   text: `CO2 Reduced: ${chartFrame.co2Kg} kg`,
                   url: window.location.href,
                 }).catch(err => console.error('[StatsPage] Share failed:', err))
@@ -479,17 +498,41 @@ export default function StatsPage() {
           >
             <Share2 size={18} />
           </button>
-          <div className="flex bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] rounded-full p-1">
+        </div>
+
+        {/* Days Counter + Subtitle */}
+        <div className="mb-3">
+          <div className="text-[48px] font-extrabold text-[#FFFFFF] leading-none tracking-tight">
+            {deviceDays || 128}
+          </div>
+          <div className="text-[13px] font-medium text-[#0D9488] mt-0.5">Days</div>
+          <p className="text-[11px] text-[#8E8E93] mt-1">
+            Reliable backup power since Jan 2026
+          </p>
+        </div>
+
+        {/* Period Tabs + Date Range */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex bg-[#1C1C1E] border border-[rgba(13,148,136,0.08)] rounded-full p-1">
             {periods.map((p) => (
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
-                className={`text-[10px] font-semibold px-2.5 py-1 rounded-full transition-all duration-200
-                  ${period === p ? 'bg-[#01D6BE] text-[#000000]' : 'text-[#8E8E93] hover:text-[#FFFFFF]'}`}
+                className={`text-[10px] font-semibold px-2.5 py-1.5 rounded-full transition-all duration-200
+                  ${period === p ? 'bg-[#0D9488] text-[#000000]' : 'text-[#8E8E93] hover:text-[#FFFFFF]'}`}
               >
                 {p}
               </button>
             ))}
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-[#1C1C1E] text-[#8E8E93] transition-colors">
+              <ChevronLeft size={14} />
+            </button>
+            <span className="text-[11px] text-[#8E8E93]">{dateRangeDisplay}</span>
+            <button className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-[#1C1C1E] text-[#8E8E93] transition-colors">
+              <ChevronRight size={14} />
+            </button>
           </div>
         </div>
       </div>
@@ -512,7 +555,7 @@ export default function StatsPage() {
                 </span>
                 <button
                   onClick={() => setRetryCount(c => c + 1)}
-                  className="text-[11px] text-[#01D6BE] font-semibold hover:opacity-80 transition-opacity ml-1"
+                  className="text-[11px] text-[#0D9488] font-semibold hover:opacity-80 transition-opacity ml-1"
                 >
                   Retry
                 </button>
@@ -533,43 +576,47 @@ export default function StatsPage() {
             {/* Data loaded */}
             {!historyLoading && isDataLoaded && chartFrame && (
               <>
-                {/* CO2 Card */}
+                {/* CO2 Card — Handoff P114 */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                  className="bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] rounded-[20px] p-5 mb-4 relative overflow-hidden"
+                  className="bg-[#1C1C1E] border border-[rgba(13,148,136,0.08)] rounded-[20px] p-5 mb-4 relative overflow-hidden"
                 >
-                  <div className="absolute top-0 left-0 right-0 h-px bg-[rgba(1,214,190,0.15)]" />
+                  <div className="absolute top-0 left-0 right-0 h-px bg-[rgba(13,148,136,0.15)]" />
                   <div className="flex items-center gap-2 mb-3">
                     <div className="w-8 h-8 rounded-lg bg-[rgba(52,199,89,0.1)] flex items-center justify-center">
                       <Leaf size={16} className="text-[#34C759]" />
                     </div>
-                    <span className="text-[13px] font-semibold text-[#FFFFFF]">CO2 Reduced</span>
+                    <span className="text-[13px] font-semibold text-[#FFFFFF]">CO₂ Reduced</span>
                   </div>
                   <div className="flex items-baseline gap-1 mb-1">
                     <span className="text-[36px] font-extrabold text-[#34C759] leading-none">
                       {chartFrame.co2Kg}
                     </span>
-                    <span className="text-[14px] text-[#8E8E93]">Kg</span>
+                    <span className="text-[14px] font-medium text-[#8E8E93]">Kg</span>
                   </div>
-                  <p className="text-[12px] text-[#8E8E93]">{chartFrame.ecoInsight}</p>
+                  <div className="flex items-center gap-1.5">
+                    <Trees size={14} className="text-[#34C759]" />
+                    <p className="text-[12px] text-[#8E8E93]">
+                      Equal to planting {Math.round(chartFrame.co2Kg * 2.5)} trees
+                    </p>
+                  </div>
                 </motion.div>
 
-                {/* Input vs Output Chart */}
+                {/* Input vs Output Chart — Handoff P114-135 */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.05 }}
-                  className="bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] rounded-[20px] p-4 mb-4"
+                  className="bg-[#1C1C1E] border border-[rgba(13,148,136,0.08)] rounded-[20px] p-4 mb-4"
+                  ref={chartContainerRef}
                 >
                   <div className="flex justify-between items-center mb-4">
-                    <div className="text-sm font-bold text-[#FFFFFF]">Input vs Output</div>
-                    <div className="flex gap-3">
-                      <div className="flex items-center gap-1.5 text-[10px] text-[#8E8E93]">
-                        <div className="w-2 h-2 rounded-full bg-[#01D6BE]" />
-                        <span>Solar (W)</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-[10px] text-[#8E8E93]">
-                        <div className="w-2 h-2 rounded-full bg-[#01A88F]" />
-                        <span>Output (W)</span>
+                    <div className="flex items-center gap-3">
+                      <div className="text-sm font-bold text-[#FFFFFF]">Input vs. Output</div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-[#0D9488]" />
+                        <span className="text-[10px] text-[#8E8E93]">Input</span>
+                        <span className="w-2 h-2 rounded-full bg-[#01A88F]" />
+                        <span className="text-[10px] text-[#8E8E93]">Output</span>
                       </div>
                     </div>
                   </div>
@@ -581,20 +628,22 @@ export default function StatsPage() {
                         {chartFrame.input.map((input, i) => {
                           const maxVal = Math.max(...chartFrame.input, ...chartFrame.output, 1)
                           return (
-                            <div key={i} className="flex-1 flex items-end gap-0.5 h-full">
-                              <div
-                                className="flex-1 rounded-t bg-[#01D6BE] min-h-[2px] transition-all duration-500"
-                                style={{ height: `${(input / maxVal) * 100}%` }}
-                              />
-                              <div
-                                className="flex-1 rounded-t bg-[#01A88F] min-h-[2px] transition-all duration-500"
-                                style={{ height: `${(chartFrame.output[i] / maxVal) * 100}%` }}
-                              />
+                            <div key={i} className="flex-1 flex flex-col items-center gap-0.5 h-full">
+                              <div className="flex items-end gap-0.5 w-full h-full">
+                                <div
+                                  className="flex-1 rounded-t bg-[#0D9488] min-h-[2px] transition-all duration-500"
+                                  style={{ height: `${(input / maxVal) * 100}%` }}
+                                />
+                                <div
+                                  className="flex-1 rounded-t bg-[#01A88F] min-h-[2px] transition-all duration-500"
+                                  style={{ height: `${(chartFrame.output[i] / maxVal) * 100}%` }}
+                                />
+                              </div>
                             </div>
                           )
                         })}
                       </div>
-                      <div className="h-px bg-[rgba(1,214,190,0.08)] my-1.5" />
+                      <div className="h-px bg-[rgba(13,148,136,0.08)] my-1.5" />
                       <div className="flex gap-2">
                         {chartFrame.labels.map((day) => (
                           <div key={day} className="flex-1 text-center text-[9px] text-[#48484A]">{day}</div>
@@ -602,29 +651,65 @@ export default function StatsPage() {
                       </div>
                     </div>
                   ) : (
-                    /* Day/Month/Range: Line + Area Chart */
-                    <div>
-                      <svg viewBox="0 0 340 160" className="w-full h-[140px]">
+                    /* Day/Month/Range: Interactive Line + Area Chart */
+                    <div
+                      className="relative"
+                      onMouseLeave={() => setChartTooltip(null)}
+                    >
+                      <svg
+                        viewBox="0 0 340 150"
+                        className="w-full h-[140px]"
+                        onMouseMove={(e) => {
+                          const svg = e.currentTarget
+                          const rect = svg.getBoundingClientRect()
+                          const x = ((e.clientX - rect.left) / rect.width) * 340
+                          const dataLen = chartFrame.input.length
+                          const idx = Math.min(dataLen - 1, Math.max(0, Math.round((x / 340) * (dataLen - 1))))
+                          setChartTooltip({
+                            x: (idx / (dataLen - 1)) * 340,
+                            input: chartFrame.input[idx],
+                            output: chartFrame.output[idx],
+                            label: chartFrame.labels[idx],
+                          })
+                        }}
+                      >
                         {(() => {
-                          const { linePath, areaPath } = generateAreaPath(chartFrame.input, 340, 140)
+                          const { linePath: inputLine, areaPath: inputArea } = generateAreaPath(chartFrame.input, 340, 130)
+                          const { linePath: outputLine, areaPath: outputArea } = generateAreaPath(chartFrame.output, 340, 130)
                           return (
                             <g>
-                              <path d={areaPath} fill="rgba(1,214,190,0.1)" />
-                              <path d={linePath} fill="none" stroke="#01D6BE" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                              <path d={inputArea} fill="rgba(13,148,136,0.1)" />
+                              <path d={inputLine} fill="none" stroke="#0D9488" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                              <path d={outputArea} fill="rgba(1,168,143,0.08)" />
+                              <path d={outputLine} fill="none" stroke="#01A88F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                             </g>
                           )
                         })()}
-                        {(() => {
-                          const { linePath, areaPath } = generateAreaPath(chartFrame.output, 340, 140)
-                          return (
-                            <g>
-                              <path d={areaPath} fill="rgba(1,168,143,0.08)" />
-                              <path d={linePath} fill="none" stroke="#01A88F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            </g>
-                          )
-                        })()}
+                        {/* Tooltip vertical line + dots */}
+                        {chartTooltip && (
+                          <g>
+                            <line
+                              x1={chartTooltip.x} y1={0}
+                              x2={chartTooltip.x} y2={130}
+                              stroke="rgba(255,255,255,0.15)"
+                              strokeWidth="1"
+                              strokeDasharray="4 3"
+                            />
+                            <circle cx={chartTooltip.x} cy={10 + 130 - (chartTooltip.input / Math.max(...chartFrame.input, 1)) * 120} r="3" fill="#0D9488" />
+                            <circle cx={chartTooltip.x} cy={10 + 130 - (chartTooltip.output / Math.max(...chartFrame.output, 1)) * 120} r="3" fill="#01A88F" />
+                          </g>
+                        )}
                       </svg>
-                      <div className="flex justify-between px-1">
+                      {chartTooltip && (
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-[#2C2C2E] rounded-xl px-3 py-1.5 shadow-lg border border-[rgba(255,255,255,0.08)]">
+                          <p className="text-[10px] text-[#8E8E93] text-center mb-0.5">{chartTooltip.label}</p>
+                          <div className="flex items-center gap-3">
+                            <span className="text-[11px] text-[#0D9488] font-semibold">Input {chartTooltip.input}W</span>
+                            <span className="text-[11px] text-[#01A88F] font-semibold">Output {chartTooltip.output}W</span>
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex justify-between px-1 mt-1">
                         {chartFrame.labels.filter((_, i) => i % Math.max(1, Math.floor(chartFrame.labels.length / 6)) === 0).map((label) => (
                           <span key={label} className="text-[9px] text-[#48484A]">{label}</span>
                         ))}
@@ -632,62 +717,14 @@ export default function StatsPage() {
                     </div>
                   )}
 
-                  {/* AI Insight */}
-                  <div className="mt-4 pt-3 border-t border-[rgba(1,214,190,0.06)]">
-                    <p className="text-[11px] text-[#8E8E93]">
-                      <span className="text-[#01D6BE] font-semibold">Insight: </span>
+                  {/* Insight */}
+                  <div className="mt-4 pt-3 border-t border-[rgba(13,148,136,0.06)]">
+                    <p className="text-[11px] text-[#8E8E93] leading-relaxed">
                       {chartFrame.insight}
                     </p>
                   </div>
                 </motion.div>
               </>
-            )}
-
-            {/* Battery Health Card (使用真实设备状态) */}
-            {hasDevice && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] rounded-[20px] p-4"
-              >
-                <div className="flex justify-between items-center mb-3">
-                  <div className="text-sm font-bold text-[#FFFFFF]">Battery Health</div>
-                  <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[rgba(52,199,89,0.12)] text-[#34C759] border border-[rgba(52,199,89,0.25)] text-[10px] font-semibold">
-                    Good
-                  </div>
-                </div>
-                <div className="flex items-center gap-6">
-                  <div className="flex-shrink-0">
-                    <BatteryRing
-                      percentage={soc}
-                      size={160}
-                      strokeWidth={18}
-                      isCharging={false}
-                      uid="stats-page"
-                    />
-                  </div>
-                  <div className="flex-1 grid grid-cols-2 gap-3">
-                    <div className="text-center bg-[rgba(255,255,255,0.03)] rounded-[12px] p-2.5">
-                      <div className="text-[14px] font-bold text-[#FFFFFF]">{soc}%</div>
-                      <div className="text-[9px] text-[#8E8E93] mt-0.5">Charge</div>
-                    </div>
-                    <div className="text-center bg-[rgba(255,255,255,0.03)] rounded-[12px] p-2.5">
-                      <div className="text-[14px] font-bold text-[#34C759]">
-                        {batteryTemp > 0 ? `${batteryTemp}°C` : '--'}
-                      </div>
-                      <div className="text-[9px] text-[#8E8E93] mt-0.5">Temp</div>
-                    </div>
-                    <div className="text-center bg-[rgba(255,255,255,0.03)] rounded-[12px] p-2.5">
-                      <div className="text-[14px] font-bold text-[#01D6BE]">{deviceDays}</div>
-                      <div className="text-[9px] text-[#8E8E93] mt-0.5">Days</div>
-                    </div>
-                    <div className="text-center bg-[rgba(255,255,255,0.03)] rounded-[12px] p-2.5">
-                      <div className="text-[14px] font-bold text-[#FF9500]">{batteryHealth}%</div>
-                      <div className="text-[9px] text-[#8E8E93] mt-0.5">Health</div>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
             )}
           </>
         )}

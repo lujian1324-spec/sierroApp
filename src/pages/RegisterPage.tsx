@@ -1,7 +1,8 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Zap, User, Lock, Mail, Eye, EyeOff, AlertCircle, Loader2, ArrowLeft, Phone } from 'lucide-react'
-import { registerByEmail, registerByCellphone, checkAccountExists, sendEmailCaptcha, sendSmsCaptcha, md5Password } from '../api/authApi'
+import { registerByEmail, registerByCellphone, sendEmailCaptcha, sendSmsCaptcha } from '../api/authApi'
 
 type RegisterMode = 'email' | 'cellphone'
 
@@ -21,7 +22,6 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState(false)
   const [captchaSent, setCaptchaSent] = useState(false)
   const [captchaCooldown, setCaptchaCooldown] = useState(0)
-  const [agreed, setAgreed] = useState(false)
 
   const clearError = () => setError(null)
 
@@ -135,7 +135,7 @@ export default function RegisterPage() {
           <button
             onClick={() => window.history.back()}
             className="mt-4 px-8 py-3 rounded-xl font-semibold text-[14px]
-              bg-[#01D6BE] text-[#000000] active:scale-[0.98] transition-all"
+              bg-[#0D9488] text-[#000000] active:scale-[0.98] transition-all"
           >
             Go to Sign In
           </button>
@@ -173,7 +173,7 @@ export default function RegisterPage() {
             onClick={() => { setMode(m); clearError() }}
             className={`flex-1 py-2.5 rounded-xl text-[13px] font-medium transition-all flex items-center justify-center gap-1.5
               ${mode === m
-                ? 'bg-[rgba(1,214,190,0.12)] border border-[rgba(1,214,190,0.3)] text-[#01D6BE]'
+                ? 'bg-[rgba(13,148,136,0.12)] border border-[rgba(13,148,136,0.3)] text-[#0D9488]'
                 : 'bg-[#1C1C1E] border border-transparent text-[#8E8E93]'
               }`}
           >
@@ -203,9 +203,9 @@ export default function RegisterPage() {
             onChange={e => { setAccount(e.target.value); clearError() }}
             placeholder="Choose an account name"
             autoComplete="username"
-            className="w-full px-4 py-3 rounded-xl bg-[#1C1C1E] border border-[rgba(1,214,190,0.15)]
+            className="w-full px-4 py-3 rounded-xl bg-[#1C1C1E] border border-[rgba(13,148,136,0.15)]
               text-[#FFFFFF] text-[14px] placeholder:text-[#48484A]
-              focus:outline-none focus:border-[rgba(1,214,190,0.5)] transition-colors"
+              focus:outline-none focus:border-[rgba(13,148,136,0.5)] transition-colors"
           />
         </div>
 
@@ -222,9 +222,9 @@ export default function RegisterPage() {
               onChange={e => { setEmail(e.target.value); clearError() }}
               placeholder="Enter your email"
               autoComplete="email"
-              className="w-full px-4 py-3 rounded-xl bg-[#1C1C1E] border border-[rgba(1,214,190,0.15)]
+              className="w-full px-4 py-3 rounded-xl bg-[#1C1C1E] border border-[rgba(13,148,136,0.15)]
                 text-[#FFFFFF] text-[14px] placeholder:text-[#48484A]
-                focus:outline-none focus:border-[rgba(1,214,190,0.5)] transition-colors"
+                focus:outline-none focus:border-[rgba(13,148,136,0.5)] transition-colors"
             />
           </div>
         ) : (
@@ -237,8 +237,8 @@ export default function RegisterPage() {
               <select
                 value={countryCode}
                 onChange={e => setCountryCode(e.target.value)}
-                className="px-3 py-3 rounded-xl bg-[#1C1C1E] border border-[rgba(1,214,190,0.15)]
-                  text-[#FFFFFF] text-[14px] focus:outline-none focus:border-[rgba(1,214,190,0.5)]"
+                className="px-3 py-3 rounded-xl bg-[#1C1C1E] border border-[rgba(13,148,136,0.15)]
+                  text-[#FFFFFF] text-[14px] focus:outline-none focus:border-[rgba(13,148,136,0.5)]"
               >
                 <option value="+1">+1</option>
                 <option value="+86">+86</option>
@@ -255,9 +255,9 @@ export default function RegisterPage() {
                 onChange={e => { setCellphone(e.target.value); clearError() }}
                 placeholder="Enter your phone number"
                 autoComplete="tel"
-                className="flex-1 px-4 py-3 rounded-xl bg-[#1C1C1E] border border-[rgba(1,214,190,0.15)]
+                className="flex-1 px-4 py-3 rounded-xl bg-[#1C1C1E] border border-[rgba(13,148,136,0.15)]
                   text-[#FFFFFF] text-[14px] placeholder:text-[#48484A]
-                  focus:outline-none focus:border-[rgba(1,214,190,0.5)] transition-colors"
+                  focus:outline-none focus:border-[rgba(13,148,136,0.5)] transition-colors"
               />
             </div>
           </div>
@@ -275,16 +275,16 @@ export default function RegisterPage() {
               onChange={e => { setCaptcha(e.target.value); clearError() }}
               placeholder="Enter verification code"
               maxLength={6}
-              className="flex-1 px-4 py-3 rounded-xl bg-[#1C1C1E] border border-[rgba(1,214,190,0.15)]
+              className="flex-1 px-4 py-3 rounded-xl bg-[#1C1C1E] border border-[rgba(13,148,136,0.15)]
                 text-[#FFFFFF] text-[14px] placeholder:text-[#48484A]
-                focus:outline-none focus:border-[rgba(1,214,190,0.5)] transition-colors"
+                focus:outline-none focus:border-[rgba(13,148,136,0.5)] transition-colors"
             />
             <button
               type="button"
               onClick={handleSendCaptcha}
               disabled={captchaCooldown > 0 || (mode === 'email' ? !email.trim() : !cellphone.trim())}
               className="px-4 py-3 rounded-xl text-[13px] font-medium whitespace-nowrap
-                bg-[rgba(1,214,190,0.12)] text-[#01D6BE] border border-[rgba(1,214,190,0.2)]
+                bg-[rgba(13,148,136,0.12)] text-[#0D9488] border border-[rgba(13,148,136,0.2)]
                 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {captchaCooldown > 0 ? `${captchaCooldown}s` : captchaSent ? 'Resend' : 'Send Code'}
@@ -305,9 +305,9 @@ export default function RegisterPage() {
               onChange={e => { setPassword(e.target.value); clearError() }}
               placeholder="At least 6 characters"
               autoComplete="new-password"
-              className="w-full px-4 py-3 pr-11 rounded-xl bg-[#1C1C1E] border border-[rgba(1,214,190,0.15)]
+              className="w-full px-4 py-3 pr-11 rounded-xl bg-[#1C1C1E] border border-[rgba(13,148,136,0.15)]
                 text-[#FFFFFF] text-[14px] placeholder:text-[#48484A]
-                focus:outline-none focus:border-[rgba(1,214,190,0.5)] transition-colors"
+                focus:outline-none focus:border-[rgba(13,148,136,0.5)] transition-colors"
             />
             <button
               type="button"
@@ -331,9 +331,9 @@ export default function RegisterPage() {
             onChange={e => { setConfirmPassword(e.target.value); clearError() }}
             placeholder="Confirm your password"
             autoComplete="new-password"
-            className="w-full px-4 py-3 rounded-xl bg-[#1C1C1E] border border-[rgba(1,214,190,0.15)]
+            className="w-full px-4 py-3 rounded-xl bg-[#1C1C1E] border border-[rgba(13,148,136,0.15)]
               text-[#FFFFFF] text-[14px] placeholder:text-[#48484A]
-              focus:outline-none focus:border-[rgba(1,214,190,0.5)] transition-colors"
+              focus:outline-none focus:border-[rgba(13,148,136,0.5)] transition-colors"
           />
         </div>
 
@@ -351,52 +351,29 @@ export default function RegisterPage() {
         )}
 
         {/* Terms & Privacy */}
-        <div className="flex items-start gap-2.5">
-          <button
-            type="button"
-            onClick={() => setAgreed(v => !v)}
-            className={`mt-0.5 w-4.5 h-4.5 flex-shrink-0 rounded-[4px] border transition-colors flex items-center justify-center
-              ${agreed
-                ? 'bg-[#01D6BE] border-[#01D6BE]'
-                : 'bg-transparent border-[#48484A]'
-              }`}
-            aria-checked={agreed}
-            role="checkbox"
+        <p className="text-[11px] leading-relaxed text-center text-[#8E8E93] px-4">
+          By creating an account, you agree to our{' '}
+          <Link
+            to="/terms"
+            className="text-[#0D9488] underline underline-offset-2 hover:text-[#14B8A6] transition-colors"
           >
-            {agreed && (
-              <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                <path d="M1 4L3.5 6.5L9 1" stroke="#000000" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            )}
-          </button>
-          <p className="text-[11px] leading-relaxed text-[#8E8E93]">
-            I agree to the{' '}
-            <a
-              href="https://solar.siseli.com/terms"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[#01D6BE] underline underline-offset-2 hover:text-[#00E5CA] transition-colors"
-            >
-              Terms of Use
-            </a>
-            {' '}and{' '}
-            <a
-              href="https://solar.siseli.com/privacy"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[#01D6BE] underline underline-offset-2 hover:text-[#00E5CA] transition-colors"
-            >
-              Privacy Policy
-            </a>
-          </p>
-        </div>
+            Terms of Use
+          </Link>
+          {' '}and{' '}
+          <Link
+            to="/privacy"
+            className="text-[#0D9488] underline underline-offset-2 hover:text-[#14B8A6] transition-colors"
+          >
+            Privacy Policy
+          </Link>
+        </p>
 
         {/* 提交按钮 */}
         <button
           type="submit"
-          disabled={loading || !account.trim() || !password.trim() || !agreed}
+          disabled={loading || !account.trim() || !password.trim()}
           className="w-full py-3.5 rounded-xl font-semibold text-[14px]
-            bg-[#01D6BE] text-[#000000]
+            bg-[#0D9488] text-[#000000]
             disabled:opacity-40 disabled:cursor-not-allowed
             active:scale-[0.98] transition-all flex items-center justify-center gap-2"
         >
