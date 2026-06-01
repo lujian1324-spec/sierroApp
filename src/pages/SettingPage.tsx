@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   Bell,
   X,
@@ -34,8 +34,9 @@ import ProfileEditPage from './ProfileEditPage'
 import type { UserProfile } from '../types/protocol'
 
 export default function SettingPage() {
+  const navigate = useNavigate()
   const { powerStation, settings, updateSettings, resetAll, activateFounderBadge } = usePowerStationStore()
-  const { user: authUser, logout } = useAuthStore()
+  const { user: authUser, logout, isGuest } = useAuthStore()
   const [showSupport, setShowSupport] = useState(false)
   const [showManageAccount, setShowManageAccount] = useState(false)
   const [showFounderModal, setShowFounderModal] = useState(false)
@@ -102,7 +103,7 @@ export default function SettingPage() {
       <div className="flex-1 overflow-y-auto scrollbar-hide px-5 pb-4">
         {/* User Profile Card */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-          onClick={() => setShowManageAccount(true)}
+          onClick={() => isGuest ? navigate('/login') : setShowManageAccount(true)}
           className="bg-[#1C1C1E] border border-[rgba(13,148,136,0.2)] rounded-[28px] p-4 mb-4
             flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform">
           <div className="relative flex-shrink-0">
@@ -126,14 +127,16 @@ export default function SettingPage() {
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="text-base font-bold text-[#FFFFFF] truncate">{userProfile.name}</h3>
+              <h3 className="text-base font-bold text-[#FFFFFF] truncate">
+                {isGuest ? 'Guest User' : userProfile.name}
+              </h3>
               {settings.founderBadge && (
                 <span className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-[rgba(255,215,0,0.15)] text-[#FFD700] border border-[rgba(255,215,0,0.3)] font-semibold flex-shrink-0">
                   <Crown size={10} /> Founding Member
                 </span>
               )}
             </div>
-            <p className="text-[12px] text-[#0D9488] mt-0.5">Manage my account</p>
+            <p className="text-[12px] text-[#0D9488] mt-0.5">{isGuest ? 'Sign in to manage your account' : 'Manage my account'}</p>
           </div>
           <div className="flex-shrink-0">
             <ChevronRight size={18} className="text-[#48484A]" />
@@ -347,16 +350,25 @@ export default function SettingPage() {
 
               {/* Actions */}
               <div className="bg-[#1C1C1E] border border-[rgba(13,148,136,0.08)] rounded-[20px] overflow-hidden mb-4">
-                <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[rgba(13,148,136,0.06)] cursor-pointer"
-                  onClick={async () => {
-                    await logout()
-                  }}>
-                  <div className="w-9 h-9 rounded-lg bg-[rgba(255,255,255,0.06)] flex items-center justify-center">
-                    <LogOut size={16} className="text-[#FFFFFF]" />
+                {isGuest ? (
+                  <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[rgba(13,148,136,0.06)] cursor-pointer"
+                    onClick={() => { setShowManageAccount(false); navigate('/login') }}>
+                    <div className="w-9 h-9 rounded-lg bg-[rgba(13,148,136,0.12)] flex items-center justify-center">
+                      <User size={16} className="text-[#0D9488]" />
+                    </div>
+                    <div className="flex-1 text-[13px] font-semibold text-[#0D9488]">Sign In</div>
+                    <ChevronRight size={16} className="text-[#0D9488]" />
                   </div>
-                  <div className="flex-1 text-[13px] font-semibold text-[#FFFFFF]">Sign out</div>
-                  <ChevronRight size={16} className="text-[#48484A]" />
-                </div>
+                ) : (
+                  <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[rgba(13,148,136,0.06)] cursor-pointer"
+                    onClick={async () => { await logout() }}>
+                    <div className="w-9 h-9 rounded-lg bg-[rgba(255,255,255,0.06)] flex items-center justify-center">
+                      <LogOut size={16} className="text-[#FFFFFF]" />
+                    </div>
+                    <div className="flex-1 text-[13px] font-semibold text-[#FFFFFF]">Sign out</div>
+                    <ChevronRight size={16} className="text-[#48484A]" />
+                  </div>
+                )}
                 <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[rgba(13,148,136,0.06)] cursor-pointer"
                   onClick={() => { setShowManageAccount(false); setShowResetConfirm(true) }}>
                   <div className="w-9 h-9 rounded-lg bg-[rgba(255,255,255,0.06)] flex items-center justify-center">

@@ -74,6 +74,7 @@ export default function DevicePage() {
     stateLoading,
   } = useDeviceStore()
   const isAuthenticated = useAuthStore(s => s.isAuthenticated)
+  const isGuest = useAuthStore(s => s.isGuest)
 
   const [showAddModal, setShowAddModal] = useState(false)
   const [showManualAdd, setShowManualAdd] = useState(false)
@@ -238,8 +239,8 @@ export default function DevicePage() {
     navigate(`/device/${device.id}`)
   }
 
-  // ── 未登录提示 ──
-  if (!isAuthenticated) {
+  // ── 未登录 + 非游客 → 强制引导登录 ──
+  if (!isAuthenticated && !isGuest) {
     return (
       <div className="h-full flex flex-col bg-[#000000] overflow-hidden">
         <div className="px-5 pt-4 pb-3 safe-area-top">
@@ -262,6 +263,27 @@ export default function DevicePage() {
 
   return (
     <div className="h-full flex flex-col bg-[#000000] overflow-hidden">
+      {/* Guest Sign In Banner */}
+      {isGuest && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          className="bg-[rgba(13,148,136,0.1)] border-b border-[rgba(13,148,136,0.15)] px-5 py-2.5 safe-area-top"
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-[12px] text-[#AEAEB2]">
+              Browsing as <span className="text-[#0D9488] font-medium">Guest</span>
+            </p>
+            <button
+              onClick={() => navigate('/login')}
+              className="flex items-center gap-1 px-3 py-1.5 bg-[#0D9488] rounded-full text-[#000000] text-[11px] font-semibold active:scale-[0.97] transition-transform"
+            >
+              Sign In <ChevronRight size={12} />
+            </button>
+          </div>
+        </motion.div>
+      )}
+
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -8 }}
