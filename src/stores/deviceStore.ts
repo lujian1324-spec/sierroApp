@@ -9,6 +9,7 @@ import {
   fetchDeviceList,
   fetchDeviceDetails,
   fetchDeviceState,
+  fetchHistoryData,
   addDevice,
   addDeviceWithStation,
   deleteDevice,
@@ -28,6 +29,7 @@ import {
   fetchSimpleEnergyFlow,
   type DeviceListItem,
   type DeviceStateResponse,
+  type HistoryDataResponse,
   type AddDeviceRequest,
   type AddDeviceWithStationRequest,
   type UpdateDeviceRequest,
@@ -77,6 +79,11 @@ interface DeviceStoreState {
   peakValleySaving: boolean
   peakValleyError: string | null
 
+  // 历史数据（StatsPage）
+  historyData: HistoryDataResponse | null
+  historyLoading: boolean
+  historyError: string | null
+
   // 操作
   loadDevices: (page?: number, count?: number, filters?: Record<string, unknown>) => Promise<void>
   loadDeviceDetails: (deviceId: string | number) => Promise<void>
@@ -98,6 +105,7 @@ interface DeviceStoreState {
   enablePeakValley: (deviceId: number, enabled: boolean) => Promise<ApiResponse<unknown>>
   savePeakValleyGeneral: (data: PeakValleyGeneralConfig) => Promise<ApiResponse<unknown>>
   loadEnergyFlow: (deviceId: string | number) => Promise<void>
+  loadHistoryData: (deviceId: string | number, fromTime: string, toTime: string, keys?: string[], count?: number, orderByTimeAsc?: boolean) => Promise<void>
 }
 
 // ═══════════════════════════════════════════════════════
@@ -139,6 +147,11 @@ export const useDeviceStore = create<DeviceStoreState>()(
       peakValleyLoading: false,
       peakValleySaving: false,
       peakValleyError: null,
+
+      // 历史数据（StatsPage）
+      historyData: null,
+      historyLoading: false,
+      historyError: null,
 
       // ─── 设备列表 ───
 
@@ -429,6 +442,31 @@ export const useDeviceStore = create<DeviceStoreState>()(
           if (seq !== energyFlowRequestSeq) return
           const msg = e instanceof Error ? e.message : String(e)
           set({ energyFlowLoading: false, energyFlowError: msg })
+        }
+      },
+
+      // ─── 历史数据（StatsPage）───
+      loadHistoryData: async (deviceId: string | number, fromTime: string, toTime: string, keys?: string[], count?: number, orderByTimeAsc = true) => {
+        if (!deviceId) return
+        set({ historyLoading: true, historyError: null })
+        try {
+          const result = await fetchHistoryData({
+            deviceId: Number(deviceId),
+            keys: keys || ['solarPower', 'outputPower', 'soc', 'batteryTemp'],
+            fromTime,
+            toTime,
+            page: 1,
+            count: count || 288,
+            orderByTimeAsc: orderByTimeAsc ?? true,
+          })
+          if ((result.code === 0 || result.code === '0') && result.data) {
+            set({ historyData: result.data, historyLoading: false })
+          } else {
+            set({ historyLoading: false, historyError: result.message || 'Failed to load history data' })
+          }
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : String(e)
+          set({ historyLoading: false, historyError: msg })
         }
       },
     }),

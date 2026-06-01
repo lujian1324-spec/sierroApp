@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { Share2, BarChart3, WifiOff, Leaf, AlertTriangle, RefreshCw } from 'lucide-react'
+import { Share2, BarChart3, WifiOff, Leaf, RefreshCw } from 'lucide-react'
 import BatteryRing from '../components/BatteryRing'
 import { useDeviceStore } from '../stores/deviceStore'
-import { fetchHistoryData, mapFieldsToRealtime, type HistoryDataResponse } from '../api/deviceApi'
+import { mapFieldsToRealtime, type HistoryDataResponse } from '../api/deviceApi'
 
 const periods = ['Day', 'Week', 'Month', 'Range'] as const
 type Period = typeof periods[number]
@@ -274,17 +274,16 @@ function ChartEmptyState({ message }: { message: string }) {
 
 export default function StatsPage() {
   const [period, setPeriod] = useState<Period>('Day')
-  const [historyData, setHistoryData] = useState<HistoryDataResponse | null>(null)
-  const [historyLoading, setHistoryLoading] = useState(false)
-  const [historyError, setHistoryError] = useState<string | null>(null)
-  const [retryCount, setRetryCount] = useState(0)
-  const [useDemo, setUseDemo] = useState(false)
 
   const {
     devices,
     selectedDeviceId,
     selectedDeviceState,
     loadDevices,
+    historyData,
+    historyLoading,
+    historyError,
+    loadHistoryData,
   } = useDeviceStore()
 
   // 确定当前设备 ID
@@ -309,9 +308,7 @@ export default function StatsPage() {
   // 加载历史数据
   const loadHistory = useCallback(async () => {
     if (!deviceId) return
-    setHistoryLoading(true)
-    setHistoryError(null)
-
+    // 调用 store 里的 loadHistoryData
     const now = new Date()
     let fromTime: Date
     let count: number
@@ -333,45 +330,24 @@ export default function StatsPage() {
         count = 720
         break
     }
-
-    try {
-      const result = await fetchHistoryData({
-        deviceId,
-        keys: ['solarPower', 'outputPower', 'soc', 'batteryTemp'],
-        fromTime: fromTime.toISOString(),
-        toTime: now.toISOString(),
-        page: 1,
-        count,
-        orderByTimeAsc: true,
-      })
-
-      if ((result.code === 0 || result.code === '0') && result.data) {
-        setHistoryData(result.data)
-        setUseDemo(false) // 成功时切回真实数据
-      } else {
-        setHistoryError(result.message || 'Failed to load history data')
-        setUseDemo(true)
-      }
-    } catch (err) {
-      setHistoryError(
-        err instanceof Error ? err.message : 'Unknown error'
-      )
-      setUseDemo(true)
-    } finally {
-      setHistoryLoading(false)
-    }
-  }, [deviceId, period, retryCount])
+    loadHistoryData(
+      deviceId,
+      fromTime.toISOString(),
+      now.toISOString(),
+      ['solarPower', 'outputPower', 'soc', 'batteryTemp'],
+      count
+    )
+  }, [deviceId, period, loadHistoryData])
 
   useEffect(() => {
     loadHistory()
   }, [loadHistory])
 
-  // 解析图表数据
+  // 解析图表数据（仅使用 API 数据，无 demo 降级）
   const chartFrame = useMemo(() => {
     if (historyData) return aggregateHistory(historyData, period)
-    if (useDemo) return getDemoChartFrame(period)
     return null
-  }, [historyData, period, useDemo])
+  }, [historyData, period])
 
   // 生成 SVG path
   const generateAreaPath = (data: number[], width: number, height: number) => {
@@ -439,8 +415,8 @@ export default function StatsPage() {
     </motion.div>
   )
 
-  // 空历史：仅在无数据且非 demo 模式时显示
-  const emptyHistory = !historyLoading && !isDataLoaded && !useDemo
+  // 空历史：API 返回空数据且无设备时显示
+  const emptyHistory = !historyLoading && !isDataLoaded
     ? (
       <ChartEmptyState
         message={
@@ -473,7 +449,7 @@ export default function StatsPage() {
                   title: 'Sierro Energy Stats',
                   text: `CO2 Reduced: ${chartFrame.co2Kg} kg`,
                   url: window.location.href,
-                }).catch(() => {})
+                }).catch(err => console.error('[StatsPage] Share failed:', err))
               }
             }}
           >
@@ -500,25 +476,6 @@ export default function StatsPage() {
 
         {hasDevice && (
           <>
-            {/* Demo Mode Banner */}
-            {useDemo && (
-              <motion.div
-                initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-2 px-4 py-2.5 mb-3 rounded-[14px] bg-[rgba(255,204,0,0.08)] border border-[rgba(255,204,0,0.18)]"
-              >
-                <AlertTriangle size={14} className="text-[#FFCC00] flex-shrink-0" />
-                <span className="text-[11px] text-[#FFCC00] flex-1 leading-snug">
-                  Demo mode — connect device for real data
-                </span>
-                <button
-                  onClick={() => setRetryCount(c => c + 1)}
-                  className="text-[11px] text-[#01D6BE] font-semibold hover:opacity-80 transition-opacity ml-1"
-                >
-                  Retry
-                </button>
-              </motion.div>
-            )}
-
             {/* Loading skeleton */}
             {historyLoading && (
               <>
