@@ -1,0 +1,203 @@
+================================================================================
+  Sierro PowerFlow App — API 对接状态报告
+  生成时间: 2026-06-02
+  项目: PowerFlow App (React + TypeScript + Vite)
+  基础 URL: https://solar.siseli.com/apis
+================================================================================
+
+摘要
+────────────────────────────────────────────────────────────────────────────────
+  总接口数:      57 个
+  已对接完成:    20 个 (35%)
+  已定义未对接:   5 个  (9%)
+  未定义:         32 个 (56%)
+  构建状态:       ✅ TypeScript 0 错误
+  最新 Commit:     26f5e11 (feat: connect StatsPage to deviceStore)
+
+================================================================================
+一、已对接 API 清单（20个，可正常使用）
+================================================================================
+
+序号  | 方法 | API 路径                                    | 函数名                  | 状态
+─────|──────|─────────────────────────────────────────────|─────────────────────────|─────────
+1    | POST | /device/list                                | fetchDeviceList         | ✅ 已对接
+2    | GET  | /device/details?deviceId=                | fetchDeviceDetails      | ✅ 已对接
+3    | POST | /device/add/single                       | addDevice               | ✅ 已对接
+4    | POST | /device/add/single/addStationTogether    | addDeviceWithStation   | ✅ 已对接
+5    | POST | /device/delete                            | deleteDevice             | ✅ 已对接
+6    | POST | /device/update                            | updateDevice             | ✅ 已对接
+7    | POST | /device/pin                              | pinDevice               | ✅ 已对接
+8    | POST | /device/unpin                            | unpinDevice             | ✅ 已对接
+9    | GET  | /remote/device/state/latest?deviceId=  | fetchDeviceState        | ✅ 已对接
+10   | POST | /remote/device/config/write?deviceId=  | writeDeviceConfig      | ✅ 已对接
+11   | POST | /remote/device/configs/read?deviceId=  | readDeviceConfigs      | ✅ 已对接
+12   | GET  | /remote/device/energy/flow?deviceId=  | fetchDeviceEnergyFlow  | ✅ 已对接
+13   | POST | /remote/device/state/report/fast/start | startFastReport         | ✅ 已对接
+14   | POST | /remote/device/state/report/fast/stop  | stopFastReport         | ✅ 已对接
+15   | POST | /deviceState/attribute/keys/history    | fetchHistoryData       | ✅ 已对接
+16   | POST | /alarm/query/list                        | fetchAlarms             | ✅ 已对接
+17   | POST | /alarm/update/isProcessed              | ignoreAlarm             | ✅ 已对接
+18   | GET  | /peakValley/device/get?deviceId=       | fetchPeakValleyConfig  | ✅ 已对接
+19   | POST | /peakValley/device/enable               | setPeakValleyEnabled   | ✅ 已对接
+20   | POST | /peakValley/device/general/set          | setPeakValleyGeneral   | ✅ 已对接
+21   | POST | /station/list                            | fetchStationList        | ✅ 已对接
+22   | POST | /station/add                             | addStation              | ✅ 已对接
+23   | GET  | /deviceState/simple/energy/flow/v1    | fetchSimpleEnergyFlow   | ✅ 已对接
+
+================================================================================
+二、已定义但未完全对接（5个）
+================================================================================
+
+序号  | API 路径                                    | 函数名             | 状态说明
+─────|─────────────────────────────────────────────|────────────────────|─────────────────────────────
+1    | POST /deviceState/attribute/keys/history    | fetchHistoryData  | ✅ API已定义，StatsPage 已连接 store
+2    | POST /auth/forgot-password                | (未实现)         | ❌ UI 未实现
+3    | POST /auth/reset-password                 | (未实现)         | ❌ UI 未实现
+4    | POST /device/add/single                      | addDevice         | ✅ API已定义，添加设备 UI 未实现
+5    | GET  /peakValley/device/general/get         | fetchPeakValleyGeneral | ✅ API已定义，SmartSchedulePage 已使用
+
+================================================================================
+三、未对接 API 清单（32个，按优先级分类）
+================================================================================
+
+【P0 - 核心功能，必须对接】
+序号  | 方法 | API 路径                           | 函数名                   | 优先级
+─────|──────|────────────────────────────────────|──────────────────────────|────────
+1    | POST | /auth/forgot-password             | forgotPassword           | P0
+2    | POST | /auth/reset-password              | resetPassword            | P0
+3    | POST | /auth/send-reset-code            | sendResetCode           | P0
+4    | POST | /device/add                      | addDevice (UI)          | P0
+5    | GET  | /deviceState/simple/state/latest | fetchSimpleState         | P0
+
+【P1 - 重要功能，建议对接】
+序号  | 方法 | API 路径                              | 函数名                  | 优先级
+─────|──────|──────────────────────────────────────────|───────────────────────────|────────
+6    | GET  | /station/details?stationId=            | fetchStationDetails     | P1
+7    | POST | /station/update                        | updateStation           | P1
+8    | POST | /station/delete?stationId=            | deleteStation          | P1
+9    | GET  | /station/energy/flow?stationId=       | fetchStationEnergyFlow | P1
+10   | POST | /remote/device/config/read?deviceId=   | readDeviceConfig      | P1
+11   | POST | /remote/device/configs/cache/get       | getDeviceConfigCache  | P1
+12   | GET  | /remote/device/state/report/fast/     | checkFastReport       | P1
+     |      | supported?deviceId=                     | Supported             |
+13   | GET  | /device/query/attribute/group           | fetchDeviceAttribute  | P1
+     |      | ?deviceId=                             | Groups                |
+14   | GET  | /device/dtu/info?dtuDtuid=            | fetchDtuInfo          | P1
+15   | POST | /alarm/getLatestAlarm                  | fetchLatestAlarm       | P1
+16   | POST | /alarm/delete/alarm?id=               | deleteAlarm           | P1
+17   | GET  | /peakValley/device/general/get        | fetchPeakValley      | P1
+     |      | ?deviceId=                              | General               |
+18   | POST | /peakValley/device/customized/set      | setPeakValley        | P1
+     |      |                                       | Customized            |
+19   | GET  | /peakValley/device/attribute/group    | fetchPeakValley      | P1
+     |      | ?deviceId=                              | AttributeGroup        |
+20   | GET  | /peakValley/types/device?deviceId=    | fetchPeakValleyTypes | P1
+21   | GET  | /peakValley/types/all                  | fetchAllPeakValley   | P1
+     |      |                                       | Types                 |
+
+【P2 - 增强功能，可选对接】
+序号  | 方法 | API 路径                                 | 函数名                 | 优先级
+─────|──────|──────────────────────────────────────────────|──────────────────────────|────────
+22   | GET  | /deviceApplyMode/modes/main                | fetchMainApplyModes    | P2
+23   | GET  | /deviceApplyMode/modes/external           | fetchExternalApply    | P2
+     |      |                                          | Modes                 |
+24   | POST | /remote/device/state/report/fast/start    | startFastReport       | P2 (已定义)
+25   | POST | /remote/device/state/report/fast/stop    | stopFastReport        | P2 (已定义)
+26   | GET  | /deviceState/simple/state/latest/v1        | fetchSimpleState      | P2
+     |      | ?deviceId=                                 |                       |
+27   | POST | /device/assign                           | assignDevice          | P2
+28   | POST | /device/unassign                         | unassignDevice        | P2
+29   | GET  | /user/devices                           | fetchUserDevices      | P2
+30   | POST | /user/device/alias                       | setDeviceAlias        | P2
+31   | GET  | /firmware/latest?deviceId=                | fetchLatestFirmware   | P2
+32   | POST | /firmware/upgrade                       | upgradeFirmware      | P2
+33   | GET  | /firmware/upgrade/progress              | fetchUpgradeProgress  | P2
+34   | POST | /share/device/create                     | createDeviceShare     | P2
+35   | POST | /share/device/accept                    | acceptDeviceShare     | P2
+36   | POST | /share/device/revoke                    | revokeDeviceShare     | P2
+37   | GET  | /share/device/list                      | fetchDeviceShares     | P2
+
+================================================================================
+四、API 对接进度统计
+================================================================================
+
+类别                | 数量 | 占比
+────────────────────|──────|────────
+已对接（可用）     | 23   | 40.4%
+已定义未对接        | 5    | 8.8%
+未定义              | 29   | 50.9%
+总计                | 57   | 100.0%
+
+================================================================================
+五、当前任务状态（Task List）
+================================================================================
+
+任务 ID | 任务名称                              | 状态       | 说明
+────────|─────────────────────────────────────|────────────|─────────────────────────────
+#51     | 连接历史数据 API (StatsPage)        | ✅ 已完成  | deviceStore + StatsPage 已对接
+#52     | 实现添加设备流程                      | ⏳ 待处理  | P0 优先级
+#53     | 实现忘记密码功能                      | ⏳ 待处理  | P0 优先级
+#54     | 实现修改密码功能                      | ⏳ 待处理  | P0 优先级
+
+================================================================================
+六、重要技术说明
+================================================================================
+
+1. 认证方式
+   - 仅支持邮箱注册/登录和短信验证码登录
+   - 不支持 Google OAuth 和 Apple Sign-In
+   - 验证码发送字段为 address（非 email）
+   - 响应字段为 iotCaptchaId（非 captchaId）
+
+2. 请求签名
+   - 使用 IoT 签名认证
+   - 请求头需要: IOT-AppID, IOT-AppSecret, IOT-Token
+   - IOT-Open-Body-Hash: MD5(body + timestamp + nonce)
+   - IOT-Timestamp: 当前时间戳（秒）
+   - IOT-Nonce: 随机字符串
+
+3. 常见属性 key
+   - soc (电池电量 %)
+   - batteryPower (电池功率 W)
+   - acPower (AC 输出功率 W)
+   - solarPower (太阳能输入功率 W)
+   - outputPower (输出功率 W)
+   - batteryTemp (电池温度 °C)
+   - workMode (工作模式: 0=正常, 1=备份, 2=节能)
+   - acOut1Enable, acOut2Enable (AC 输出开关)
+   - usbOut1Enable (USB 输出开关)
+   - sleepMode (睡眠模式)
+
+4. 设计系统
+   - Primary: #01D6BE → 已更换为 #0D9488
+   - Light: #00E5CA → 已更换为 #14B8A6
+   - Background: #000000
+   - Card: #1C1C1E
+   - 圆角: sm=8px, md=14px, lg=20px, xl=28px
+
+================================================================================
+七、下一步行动建议
+================================================================================
+
+立即处理（本周）:
+  ✅ 完成 StatsPage 历史数据展示（已完成）
+  ⏳ 实现添加设备 UI 和流程（Task #52）
+  ⏳ 实现忘记密码功能（Task #53）
+  ⏳ 实现重置密码功能（Task #54）
+
+近期处理（本月）:
+  ⏳ 实现电站详情页
+  ⏳ 实现电站编辑/删除功能
+  ⏳ 实现设备配置读取缓存
+  ⏳ 实现告警详情和删除
+  ⏳ 完善削峰填谷自定义配置
+
+长期规划（下月）:
+  ⏳ 实现设备应用模式切换
+  ⏳ 实现固件升级功能
+  ⏳ 实现设备分享功能
+  ⏳ 实现更多历史数据图表（Week/Month/Range）
+
+================================================================================
+  报告结束
+================================================================================
