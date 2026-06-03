@@ -273,17 +273,18 @@ function ChartEmptyState({ message }: { message: string }) {
 
 export default function StatsPage() {
   const [period, setPeriod] = useState<Period>('Day')
-  const [historyData, setHistoryData] = useState<HistoryDataResponse | null>(null)
-  const [historyLoading, setHistoryLoading] = useState(false)
-  const [historyError, setHistoryError] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
-  const [useDemo, setUseDemo] = useState(false)
 
   const {
     devices,
     selectedDeviceId,
     selectedDeviceState,
     loadDevices,
+    historyData,
+    historyLoading,
+    historyError,
+    loadHistoryData,
+    useDemo,
   } = useDeviceStore()
 
   // 确定当前设备 ID
@@ -308,9 +309,7 @@ export default function StatsPage() {
   // 加载历史数据
   const loadHistory = useCallback(async () => {
     if (!deviceId) return
-    setHistoryLoading(true)
-    setHistoryError(null)
-
+    
     const now = new Date()
     let fromTime: Date
     let count: number
@@ -332,34 +331,15 @@ export default function StatsPage() {
         count = 720
         break
     }
-
-    try {
-      const result = await fetchHistoryData({
-        deviceId,
-        keys: ['solarPower', 'outputPower', 'soc', 'batteryTemp'],
-        fromTime: fromTime.toISOString(),
-        toTime: now.toISOString(),
-        page: 1,
-        count,
-        orderByTimeAsc: true,
-      })
-
-      if ((result.code === 0 || result.code === '0') && result.data) {
-        setHistoryData(result.data)
-        setUseDemo(false) // 成功时切回真实数据
-      } else {
-        setHistoryError(result.message || 'Failed to load history data')
-        setUseDemo(true)
-      }
-    } catch (err) {
-      setHistoryError(
-        err instanceof Error ? err.message : 'Unknown error'
-      )
-      setUseDemo(true)
-    } finally {
-      setHistoryLoading(false)
-    }
-  }, [deviceId, period, retryCount])
+    
+    await loadHistoryData(
+      deviceId,
+      fromTime.toISOString(),
+      now.toISOString(),
+      ['solarPower', 'outputPower', 'soc', 'batteryTemp'],
+      count
+    )
+  }, [deviceId, period, retryCount, loadHistoryData])
 
   useEffect(() => {
     loadHistory()
@@ -368,9 +348,11 @@ export default function StatsPage() {
   // 解析图表数据
   const chartFrame = useMemo(() => {
     if (historyData) return aggregateHistory(historyData, period)
-    if (useDemo) return getDemoChartFrame(period)
-    return null
-  }, [historyData, period, useDemo])
+    return null  // 不再使用 demo 数据，只显示真实 API 数据
+  }, [historyData, period])
+
+  // 是否有数据
+  const hasData = chartFrame !== null
 
   // 生成 SVG path
   const generateAreaPath = (data: number[], width: number, height: number) => {
