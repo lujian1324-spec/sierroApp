@@ -27,7 +27,6 @@ import {
   fetchStationList,
   addStation,
   fetchSimpleEnergyFlow,
-  fetchHistoryData,
   type DeviceListItem,
   type DeviceStateResponse,
   type HistoryDataResponse,
@@ -40,7 +39,6 @@ import {
   type PeakValleyGeneralConfig,
   type PeakValleyBundleResponse,
   type EnergyFlowData,
-  type HistoryDataResponse,
 } from '../api/deviceApi'
 import type { ApiResponse } from '../utils/apiClient'
 
