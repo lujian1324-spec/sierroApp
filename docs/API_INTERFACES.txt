@@ -1,0 +1,972 @@
+================================================================================
+  Sierro PowerFlow App — API 接口完整文档
+  Sierro Inc. 储能设备管理平台
+  生成时间: 2026-06-02
+  项目路径: Z:\PowerFlowApp\powerflow-app
+  基础 URL: https://solar.siseli.com/apis
+================================================================================
+
+目录
+────────────────────────────────────────────────────────────────────────────────
+1.  API 认证与请求签名
+2.  已对接 API 接口列表（20个）
+3.  未对接 API 接口列表（37个）
+4.  核心类型定义
+5.  API 函数实现代码
+6.  Store 集成状态
+7.  对接优先级建议
+
+================================================================================
+1. API 认证与请求签名
+================================================================================
+
+认证方式: IoT 签名认证
+请求头:
+  - IOT-AppID:      rYGQpmYU5k
+  - IOT-AppSecret:  GhJXQYEHphHlyiqYnBGE
+  - IOT-Token:     从登录接口获取
+  - IOT-Open-Body-Hash: MD5(body || timestamp || nonce)
+  - IOT-Timestamp: 当前时间戳（秒）
+  - IOT-Nonce:      随机字符串
+  - Origin:         https://solar.siseli.com
+  - Referer:        https://solar.siseli.com/
+
+签名算法:
+  1. 构造待签名字符串: method + path + timestamp + nonce + bodyHash
+  2. 使用 AppSecret 进行 HMAC-SHA256 签名
+  3. 将签名结果 Base64 编码放入请求头
+
+重要注意事项:
+  - 仅支持邮箱注册/登录和短信验证码登录
+  - 不支持 Google OAuth 和 Apple Sign-In
+  - 验证码发送字段为 address（非 email）
+  - 响应字段为 iotCaptchaId（非 captchaId）
+
+================================================================================
+2. 已对接 API 接口列表（20个）
+================================================================================
+
+【设备管理】
+✅ POST /device/list                            → fetchDeviceList          分页获取设备列表
+✅ GET  /device/details?deviceId=              → fetchDeviceDetails       获取设备详情
+✅ POST /device/add/single                     → addDevice               添加单个设备
+✅ POST /device/add/single/addStationTogether  → addDeviceWithStation    添加设备同时创建电站
+✅ POST /device/delete                        → deleteDevice             删除设备（解绑）
+✅ POST /device/update                         → updateDevice             更新设备信息
+✅ POST /device/pin                            → pinDevice               置顶设备
+✅ POST /device/unpin                          → unpinDevice             取消置顶
+
+【设备实时状态】
+✅ GET  /remote/device/state/latest?deviceId=       → fetchDeviceState        获取设备最新实时状态
+✅ POST /remote/device/config/write?deviceId=       → writeDeviceConfig       远程写入设备配置
+✅ POST /remote/device/configs/read?deviceId=      → readDeviceConfigs       批量读取设备配置项
+✅ GET  /remote/device/energy/flow?deviceId=      → fetchDeviceEnergyFlow   获取设备能量流动
+✅ POST /remote/device/state/report/fast/start     → startFastReport         启动设备速报
+✅ POST /remote/device/state/report/fast/stop      → stopFastReport          停止速报
+
+【历史数据】
+✅ POST /deviceState/attribute/keys/history        → fetchHistoryData        获取设备指定属性历史数据
+
+【告警】
+✅ POST /alarm/query/list                        → fetchAlarms             查询告警列表
+✅ POST /alarm/update/isProcessed                → ignoreAlarm             忽略/处理告警
+
+【削峰填谷】
+✅ GET  /peakValley/device/get?deviceId=         → fetchPeakValleyConfig   获取设备削峰填谷配置
+✅ POST /peakValley/device/enable                 → setPeakValleyEnabled    启用/禁用削峰填谷
+✅ POST /peakValley/device/general/set            → setPeakValleyGeneral    设置常规削峰填谷
+
+【电站】
+✅ POST /station/list                            → fetchStationList         获取电站列表
+✅ POST /station/add                             → addStation              创建电站
+
+【简化状态】
+✅ GET  /deviceState/simple/energy/flow/v1?deviceId= → fetchSimpleEnergyFlow  获取设备简单能量流动
+
+================================================================================
+3. 未对接 API 接口列表（37个）
+================================================================================
+
+优先级说明:
+  P0 = 核心功能，必须对接
+  P1 = 重要功能，建议对接
+  P2 = 增强功能，可选对接
+
+【P0 - 核心功能（未对接）】
+❌ POST /deviceState/attribute/keys/history       → 历史数据（已定义，StatsPage 进行中）
+❌ POST /device/add/single                      → 添加设备（已定义 API，UI 未实现）
+❌ POST /auth/forgot-password                   → 忘记密码（UI 未实现）
+❌ POST /auth/reset-password                    → 重置密码（UI 未实现）
+
+【P1 - 重要功能（未对接）】
+❌ GET  /station/details?stationId=            → 电站详情
+❌ POST /station/update                        → 更新电站
+❌ POST /station/delete?stationId=            → 删除电站
+❌ GET  /station/energy/flow?stationId=       → 电站能量流动
+❌ POST /remote/device/config/read?deviceId=   → 读取单个设备配置项
+❌ POST /remote/device/configs/cache/get        → 获取设备配置项缓存
+❌ POST /remote/device/state/report/fast/supported → 检查是否支持速报
+❌ GET  /device/query/attribute/group            → 查询设备属性分组列表
+❌ GET  /device/dtu/info?dtuDtuId=            → 获取设备采集器信息
+❌ POST /alarm/getLatestAlarm                   → 获取最近一条告警
+❌ POST /alarm/delete/alarm?id=                → 删除告警
+❌ GET  /peakValley/device/general/get         → 获取设备常规削峰填谷配置
+❌ POST /peakValley/device/customized/set       → 设置自定义削峰填谷
+❌ GET  /peakValley/device/attribute/group      → 获取设备削峰填谷采集属性分组
+❌ GET  /peakValley/types/device                → 获取设备支持的削峰填谷类型
+❌ GET  /peakValley/types/all                   → 获取所有削峰填谷类型
+
+【P2 - 增强功能（未对接）】
+❌ GET  /deviceApplyMode/modes/main             → 获取设备主应用模式列表
+❌ GET  /deviceApplyMode/modes/external        → 获取设备外挂应用模式列表
+❌ POST /device/pin                            → 置顶设备（重复，已对接）
+❌ POST /device/unpin                          → 取消置顶（重复，已对接）
+❌ GET  /deviceState/simple/state/latest/v1    → 获取设备最新状态简单数据
+❌ POST /device/assign                          → 分配设备给用户
+❌ POST /device/unassign                        → 取消分配设备
+❌ GET  /user/devices                          → 获取用户设备列表
+❌ POST /user/device/alias                      → 设置设备别名
+❌ GET  /firmware/latest?deviceId=             → 获取最新固件版本
+❌ POST /firmware/upgrade                      → 升级固件
+❌ GET  /firmware/upgrade/progress             → 获取固件升级进度
+❌ POST /share/device/create                    → 创建设备分享
+❌ POST /share/device/accept                   → 接受设备分享
+❌ POST /share/device/revoke                   → 撤销设备分享
+❌ GET  /share/device/list                     → 获取设备分享列表
+
+================================================================================
+4. 核心类型定义
+================================================================================
+
+//--------------------------------------------------------------------------
+// 设备列表相关类型
+//--------------------------------------------------------------------------
+
+export interface DeviceListRequest {
+  page: number          // *required* 页码（从1开始）
+  count: number         // *required* 每页数量
+  stationId?: number
+  name?: string         // 设备名（模糊搜索）
+  serialNumber?: string
+  deviceSortKey?: string
+  gatherProtocolNumber?: string
+  dtuDtuId?: string
+  dtuId?: number
+  ownerUserId?: number
+  ownerUserName?: string
+  stationName?: string
+  state?: string
+  softwareVersion?: string
+  applyModeCategory?: number
+  orderByCreatedAtAsc?: boolean
+  orderByInstalledAtAsc?: boolean
+  orderByNameAsc?: boolean
+  orderByProducingPowerAsc?: boolean
+  orderBySerialNumberAsc?: boolean
+  orderByStateAsc?: boolean
+}
+
+export interface DeviceListItem {
+  id: number
+  name: string
+  serialNumber: string
+  model: string
+  deviceSortKey: string
+  deviceSortLocaleText: string
+  gatherProtocolNumber: string
+  gatherProtocolNameDisplay: string
+  softwareVersion: string
+  stationId: number
+  stationName: string
+  dtuId: number
+  dtuDtuId: string
+  dtuName: string
+  isOnline: boolean
+  isAlarmed: boolean
+  isPined: boolean
+  isPeakValleyEnabled: boolean
+  isUpgrading: boolean
+  isFirmwareUpgradeEnabled: boolean
+  isExternalDevice: boolean
+  isMainMasterDevice: boolean
+  applyMode: number
+  state: string
+  stateDict: string
+  producingPower: number
+  ratedPower: number
+  dailyProducedQuantity: number
+  totalProducedQuantity: number
+  installedAt: string
+  lastDataAt: string
+  lastOnlineAt: string
+  lastOfflineAt: string
+  place: string
+  iconResid: string
+  ownerUserId: number
+  ownerUserName: string
+  stationTimezone: string
+  stationCurrencyCode: string
+  stationEnergyIncomePrice: number
+  co2EmissionReduction: number
+  noxEmissionReduction: number
+  so2EmissionReduction: number
+  savingStandardCarbon: number
+  extraProperty: Record<string, unknown>
+  summaryProperty: Record<string, unknown>
+}
+
+export interface DeviceListResponse {
+  list: DeviceListItem[]
+  total: number
+  page: number
+  count: number
+}
+
+//--------------------------------------------------------------------------
+// 设备实时状态相关类型
+//--------------------------------------------------------------------------
+
+export interface DeviceStateField {
+  key: string
+  name: string
+  value: unknown
+  valueDisplay: string
+  unit: string
+  valueType: string
+  category: string
+  isHidden?: boolean
+  nameDisplay?: string
+}
+
+export interface DeviceStateGroup {
+  id: number
+  key: string
+  name: string
+  category: string
+  isHidden?: boolean
+  stateItems: Array<DeviceStateField & { isHidden: boolean; nameDisplay: string }>
+}
+
+export interface DeviceStateResponse {
+  deviceId: string
+  dtuID: string
+  time: string
+  stationId: string
+  gatherProtocolNumber: string
+  gatherProtocolVersionCode: string
+  fields: Record<string, DeviceStateField>
+  groups: DeviceStateGroup[]
+  firingAlarms: Array<{
+    alarmId: string
+    alarmCode: string
+    alarmMessage: string
+    severity: string
+    timestamp: string
+  }>
+}
+
+//--------------------------------------------------------------------------
+// 设备控制相关类型
+//--------------------------------------------------------------------------
+
+export interface WriteConfigRequest {
+  key: string
+  value: unknown
+}
+
+export interface ReadConfigsRequest {
+  keys: string[]
+}
+
+//--------------------------------------------------------------------------
+// 历史数据相关类型
+//--------------------------------------------------------------------------
+
+export interface HistoryDataRequest {
+  deviceId: number
+  keys: string[]
+  fromTime: string
+  toTime: string
+  page: number
+  count: number
+  orderByTimeAsc?: boolean
+}
+
+export interface HistoryDataPoint {
+  time: string
+  value: unknown
+}
+
+export interface HistoryDataResponse {
+  [key: string]: HistoryDataPoint[]
+}
+
+//--------------------------------------------------------------------------
+// 告警相关类型
+//--------------------------------------------------------------------------
+
+export interface AlarmSearchRequest {
+  page: number
+  count: number
+  deviceId?: number
+  stationId?: number
+  dtuId?: number
+  deviceSerialNumber?: string
+  certificateDtuID?: string
+  fromTime?: string
+  toTime?: string
+  isProcessed?: boolean
+  level?: string
+  orderByCreatedTimeDesc?: boolean
+}
+
+export interface AlarmItem {
+  id: number
+  deviceId: number
+  deviceName: string
+  deviceSerialNumber: string
+  alarmCode: string
+  alarmMessage: string
+  alarmLevel: string
+  isProcessed: boolean
+  createdAt: string
+  processedAt?: string
+}
+
+export interface AlarmListResponse {
+  list: AlarmItem[]
+  total: number
+  page: number
+  count: number
+}
+
+//--------------------------------------------------------------------------
+// 削峰填谷相关类型
+//--------------------------------------------------------------------------
+
+export interface PeakValleyItem {
+  startTime: string         // HH:mm
+  endTime: string           // HH:mm
+  chargeOrDischarge: number // 0=charge, 1=discharge
+  power: number             // W
+  socMin?: number
+  socMax?: number
+}
+
+export interface PeakValleyGeneralConfig {
+  deviceId: number
+  isEnabled: boolean
+  items: PeakValleyItem[]
+  peakPrice?: number
+  offPeakPrice?: number
+  partPeakPrice?: number
+  maxChargePower?: number
+  maxDischargePower?: number
+  minBatteryLevel?: number
+  maxBatteryLevel?: number
+}
+
+export interface PeakValleyBundleResponse {
+  deviceId: number
+  isEnabled: boolean
+  category?: string           // 'general' | 'customized'
+  generalItem?: PeakValleyGeneralConfig
+  customizedItem?: PeakValleyItem[]
+  peakPrice?: number
+  offPeakPrice?: number
+  partPeakPrice?: number
+  maxChargePower?: number
+  maxDischargePower?: number
+  minSoc?: number
+  maxSoc?: number
+  chargeSocLimit?: number
+}
+
+//--------------------------------------------------------------------------
+// 电站相关类型
+//--------------------------------------------------------------------------
+
+export interface StationItem {
+  id: number
+  name: string
+  stationType: number
+  connectedGridType: number
+  state: string
+  installedCapacity: number
+  country: string
+  province: string
+  city: string
+  address: string
+  latitude: number
+  longitude: number
+  timezone: string
+  currencyCode: string
+  energyIncomePrice: number
+  ownerUserId: number
+  ownerUserName: string
+  isPined: boolean
+  deviceCount: number
+  producingPower: number
+  dailyProducedQuantity: number
+  totalProducedQuantity: number
+  installedAt: string
+  imageResid: string
+}
+
+================================================================================
+5. API 函数实现代码
+================================================================================
+
+文件路径: src/api/deviceApi.ts
+
+//--------------------------------------------------------------------------
+// 设备管理 API
+//--------------------------------------------------------------------------
+
+/** 获取设备列表（分页） */
+export async function fetchDeviceList(
+  page = 1,
+  count = 20,
+  filters?: Omit<DeviceListRequest, 'page' | 'count'>
+): Promise<ApiResponse<DeviceListResponse>> {
+  return api.post<DeviceListResponse>('/device/list', {
+    page,
+    count,
+    ...filters,
+  })
+}
+
+/** 获取设备详情 */
+export async function fetchDeviceDetails(
+  deviceId: string | number
+): Promise<ApiResponse<DeviceListItem>> {
+  return api.get<DeviceListItem>(`/device/details?deviceId=${deviceId}`)
+}
+
+/** 添加单个设备 */
+export async function addDevice(
+  data: AddDeviceRequest
+): Promise<ApiResponse<unknown>> {
+  return api.post<unknown>('/device/add/single', data)
+}
+
+/** 添加设备同时创建电站 */
+export async function addDeviceWithStation(
+  data: AddDeviceWithStationRequest
+): Promise<ApiResponse<unknown>> {
+  return api.post<unknown>('/device/add/single/addStationTogether', data)
+}
+
+/** 删除设备（解绑/登出） */
+export async function deleteDevice(
+  ids: number[]
+): Promise<ApiResponse<unknown>> {
+  return api.post<unknown>('/device/delete', { ids })
+}
+
+/** 更新设备信息 */
+export async function updateDevice(
+  data: UpdateDeviceRequest
+): Promise<ApiResponse<unknown>> {
+  return api.post<unknown>('/device/update', data)
+}
+
+/** 置顶设备 */
+export async function pinDevice(ids: number[]): Promise<ApiResponse<unknown>> {
+  return api.post<unknown>('/device/pin', { ids })
+}
+
+/** 取消置顶设备 */
+export async function unpinDevice(ids: number[]): Promise<ApiResponse<unknown>> {
+  return api.post<unknown>('/device/unpin', { ids })
+}
+
+//--------------------------------------------------------------------------
+// 设备实时状态 API
+//--------------------------------------------------------------------------
+
+/** 获取设备最新实时状态 */
+export async function fetchDeviceState(
+  deviceId: string | number
+): Promise<ApiResponse<DeviceStateResponse>> {
+  return api.get<DeviceStateResponse>(
+    `/remote/device/state/latest?deviceId=${deviceId}`
+  )
+}
+
+/** 获取设备能量流动 */
+export async function fetchDeviceEnergyFlow(
+  deviceId: string | number
+): Promise<ApiResponse<unknown>> {
+  return api.get<unknown>(`/remote/device/energy/flow?deviceId=${deviceId}`)
+}
+
+//--------------------------------------------------------------------------
+// 设备控制 API
+//--------------------------------------------------------------------------
+
+/** 远程写入设备配置 */
+export async function writeDeviceConfig(
+  deviceId: string | number,
+  key: string,
+  value: unknown
+): Promise<ApiResponse<unknown>> {
+  return api.post<unknown>(
+    `/remote/device/config/write?deviceId=${deviceId}`,
+    { key, value }
+  )
+}
+
+/** 读取单个设备配置项 */
+export async function readDeviceConfig(
+  deviceId: string | number,
+  key: string
+): Promise<ApiResponse<unknown>> {
+  return api.post<unknown>(
+    `/remote/device/config/read?deviceId=${deviceId}`,
+    { key }
+  )
+}
+
+/** 批量读取设备配置项 */
+export async function readDeviceConfigs(
+  deviceId: string | number,
+  keys: string[]
+): Promise<ApiResponse<unknown>> {
+  return api.post<unknown>(
+    `/remote/device/configs/read?deviceId=${deviceId}`,
+    { keys }
+  )
+}
+
+/** 获取设备配置项缓存 */
+export async function getDeviceConfigCache(
+  deviceId: string | number,
+  keys: string[]
+): Promise<ApiResponse<unknown>> {
+  return api.post<unknown>(
+    `/remote/device/configs/cache/get?deviceId=${deviceId}`,
+    { keys }
+  )
+}
+
+// 便捷控制方法
+
+/** 切换 AC 输出 1 */
+export const toggleAcOut1 = (deviceId: string | number, enable: boolean) =>
+  writeDeviceConfig(deviceId, 'acOut1Enable', enable)
+
+/** 切换 AC 输出 2 */
+export const toggleAcOut2 = (deviceId: string | number, enable: boolean) =>
+  writeDeviceConfig(deviceId, 'acOut2Enable', enable)
+
+/** 切换 USB 输出 */
+export const toggleUsbOut1 = (deviceId: string | number, enable: boolean) =>
+  writeDeviceConfig(deviceId, 'usbOut1Enable', enable)
+
+/** 切换睡眠模式 */
+export const toggleSleepMode = (deviceId: string | number, enable: boolean) =>
+  writeDeviceConfig(deviceId, 'sleepMode', enable)
+
+/** 切换工作模式 (0=正常 1=备份 2=节能) */
+export const setWorkMode = (deviceId: string | number, mode: 0 | 1 | 2) =>
+  writeDeviceConfig(deviceId, 'workMode', mode)
+
+/** 设置充电限制 SOC */
+export const setChargeLimit = (deviceId: string | number, socLimit: number) =>
+  writeDeviceConfig(deviceId, 'chargeSocLimit', socLimit)
+
+//--------------------------------------------------------------------------
+// 速报 API
+//--------------------------------------------------------------------------
+
+/** 启动设备速报 */
+export async function startFastReport(
+  deviceId: string | number,
+  clientID: string,
+  scene = 'app'
+): Promise<ApiResponse<unknown>> {
+  return api.post<unknown>(
+    `/remote/device/state/report/fast/start?deviceId=${deviceId}`,
+    { clientID, scene }
+  )
+}
+
+/** 停止速报 */
+export async function stopFastReport(
+  deviceId: string | number,
+  clientID: string
+): Promise<ApiResponse<unknown>> {
+  return api.post<unknown>(
+    `/remote/device/state/report/fast/stop?deviceId=${deviceId}`,
+    { clientID }
+  )
+}
+
+/** 检查是否支持速报 */
+export async function checkFastReportSupported(
+  deviceId: string | number
+): Promise<ApiResponse<unknown>> {
+  return api.get<unknown>(
+    `/remote/device/state/report/fast/supported?deviceId=${deviceId}`
+  )
+}
+
+//--------------------------------------------------------------------------
+// 历史数据 API
+//--------------------------------------------------------------------------
+
+/** 获取设备指定属性历史数据 */
+export async function fetchHistoryData(
+  req: HistoryDataRequest
+): Promise<ApiResponse<HistoryDataResponse>> {
+  return api.post<HistoryDataResponse>(
+    '/deviceState/attribute/keys/history',
+    req
+  )
+}
+
+/** 便捷：获取最近 N 小时的指定属性历史 */
+export function fetchRecentHistory(
+  deviceId: number,
+  keys: string[],
+  hoursAgo = 24
+) {
+  const now = new Date()
+  const from = new Date(now.getTime() - hoursAgo * 3600 * 1000)
+  return fetchHistoryData({
+    deviceId,
+    keys,
+    fromTime: from.toISOString(),
+    toTime: now.toISOString(),
+    page: 1,
+    count: 288,
+    orderByTimeAsc: true,
+  })
+}
+
+//--------------------------------------------------------------------------
+// 告警 API
+//--------------------------------------------------------------------------
+
+/** 查询告警列表 */
+export async function fetchAlarms(
+  req: Partial<AlarmSearchRequest> = {}
+): Promise<ApiResponse<AlarmListResponse>> {
+  return api.post<AlarmListResponse>('/alarm/query/list', {
+    page: req.page ?? 1,
+    count: req.count ?? 20,
+    ...req,
+  })
+}
+
+/** 获取最近一条告警 */
+export async function fetchLatestAlarm(
+  req: Partial<AlarmSearchRequest> = {}
+): Promise<ApiResponse<unknown>> {
+  return api.post<unknown>('/alarm/getLatestAlarm', {
+    page: 1,
+    count: 1,
+    ...req,
+  })
+}
+
+/** 忽略/处理告警 */
+export async function ignoreAlarm(
+  iotAlarmId: number
+): Promise<ApiResponse<unknown>> {
+  return api.post<unknown>('/alarm/update/isProcessed', { iotAlarmId })
+}
+
+/** 删除告警 */
+export async function deleteAlarm(
+  id: number
+): Promise<ApiResponse<unknown>> {
+  return api.post<unknown>(`/alarm/delete/alarm?id=${id}`)
+}
+
+//--------------------------------------------------------------------------
+// 削峰填谷 / Smart Schedule API
+//--------------------------------------------------------------------------
+
+/** 获取设备削峰填谷采集属性分组 */
+export async function fetchPeakValleyAttributeGroup(
+  deviceId: string | number
+): Promise<ApiResponse<unknown>> {
+  return api.get<unknown>(`/peakValley/device/attribute/group?deviceId=${deviceId}`)
+}
+
+/** 获取设备常规削峰填谷配置 */
+export async function fetchPeakValleyGeneral(
+  deviceId: string | number
+): Promise<ApiResponse<PeakValleyGeneralConfig>> {
+  return api.get<PeakValleyGeneralConfig>(`/peakValley/device/general/get?deviceId=${deviceId}`)
+}
+
+/** 设置设备常规削峰填谷 */
+export async function setPeakValleyGeneral(
+  data: PeakValleyGeneralConfig
+): Promise<ApiResponse<unknown>> {
+  return api.post<unknown>('/peakValley/device/general/set', data)
+}
+
+/** 获取设备削峰填谷配置（完整 bundle） */
+export async function fetchPeakValleyConfig(
+  deviceId: string | number
+): Promise<ApiResponse<PeakValleyBundleResponse>> {
+  return api.get<PeakValleyBundleResponse>(`/peakValley/device/get?deviceId=${deviceId}`)
+}
+
+/** 设置自定义削峰填谷 */
+export async function setPeakValleyCustomized(
+  data: PeakValleyCustomizedConfig
+): Promise<ApiResponse<unknown>> {
+  return api.post<unknown>('/peakValley/device/customized/set', data)
+}
+
+/** 启用/禁用削峰填谷 */
+export async function setPeakValleyEnabled(
+  data: PeakValleyEnableRequest
+): Promise<ApiResponse<unknown>> {
+  return api.post<unknown>('/peakValley/device/enable', data)
+}
+
+/** 获取设备支持的削峰填谷类型 */
+export async function fetchPeakValleyTypes(
+  deviceId: string | number,
+  includeDefault = true
+): Promise<ApiResponse<unknown>> {
+  return api.get<unknown>(
+    `/peakValley/types/device?deviceId=${deviceId}&includeDefault=${includeDefault}`
+  )
+}
+
+/** 获取所有削峰填谷类型 */
+export async function fetchAllPeakValleyTypes(): Promise<ApiResponse<unknown>> {
+  return api.get<unknown>('/peakValley/types/all')
+}
+
+//--------------------------------------------------------------------------
+// 电站 API
+//--------------------------------------------------------------------------
+
+/** 获取电站列表 */
+export async function fetchStationList(
+  page = 1,
+  count = 20,
+  filters?: Omit<StationListRequest, 'page' | 'count'>
+): Promise<ApiResponse<StationListResponse>> {
+  return api.post<StationListResponse>('/station/list', {
+    page,
+    count,
+    ...filters,
+  })
+}
+
+/** 获取电站详情 */
+export async function fetchStationDetails(
+  stationId: string | number
+): Promise<ApiResponse<StationItem>> {
+  return api.get<StationItem>(`/station/details?stationId=${stationId}`)
+}
+
+/** 创建电站 */
+export async function addStation(
+  data: StationAddRequest
+): Promise<ApiResponse<unknown>> {
+  return api.post<unknown>('/station/add', data)
+}
+
+/** 更新电站 */
+export async function updateStation(
+  data: Partial<StationItem> & { id: number }
+): Promise<ApiResponse<unknown>> {
+  return api.post<unknown>('/station/update', data)
+}
+
+/** 删除电站 */
+export async function deleteStation(
+  stationId: number
+): Promise<ApiResponse<unknown>> {
+  return api.post<unknown>(`/station/delete?stationId=${stationId}`)
+}
+
+/** 获取电站能量流动 */
+export async function fetchStationEnergyFlow(
+  stationId: string | number
+): Promise<ApiResponse<unknown>> {
+  return api.get<unknown>(`/station/energy/flow?stationId=${stationId}`)
+}
+
+//--------------------------------------------------------------------------
+// 设备应用模式 API
+//--------------------------------------------------------------------------
+
+/** 获取设备主应用模式列表 */
+export async function fetchMainApplyModes(): Promise<ApiResponse<unknown>> {
+  return api.get<unknown>('/deviceApplyMode/modes/main')
+}
+
+/** 获取设备外挂应用模式列表 */
+export async function fetchExternalApplyModes(): Promise<ApiResponse<unknown>> {
+  return api.get<unknown>('/deviceApplyMode/modes/external')
+}
+
+//--------------------------------------------------------------------------
+// 简化状态 API
+//--------------------------------------------------------------------------
+
+/** 获取设备最新状态简单数据 */
+export async function fetchSimpleState(
+  deviceId: string | number
+): Promise<ApiResponse<unknown>> {
+  return api.get<unknown>(
+    `/deviceState/simple/state/latest/v1?deviceId=${deviceId}`
+  )
+}
+
+/**
+ * 获取设备简单能量流动
+ * 返回 deviceAttributeState + pvPanelFlow / gridFlow / batteryFlow / loadFlow
+ */
+export async function fetchSimpleEnergyFlow(
+  deviceId: string | number,
+  dataSource = 1
+): Promise<ApiResponse<EnergyFlowData>> {
+  return api.get<EnergyFlowData>(
+    `/deviceState/simple/energy/flow/v1?deviceId=${deviceId}&dataSource=${dataSource}`
+  )
+}
+
+//--------------------------------------------------------------------------
+// 字段映射工具函数
+//--------------------------------------------------------------------------
+
+/** 将 API fields 映射为 DeviceRealtimeFields */
+export function mapFieldsToRealtime(
+  fields: Record<string, DeviceStateField>
+): Partial<DeviceRealtimeFields> {
+  const getNum = (key: string): number | undefined => {
+    const f = fields[key]
+    if (!f) return undefined
+    const v = Number(f.value)
+    return isNaN(v) ? undefined : v
+  }
+  const getBool = (key: string): boolean | undefined => {
+    const f = fields[key]
+    if (!f) return undefined
+    return Boolean(f.value)
+  }
+  const getInt = (key: string): 0 | 1 | 2 | undefined => {
+    const v = getNum(key)
+    if (v === undefined) return undefined
+    if (v === 0 || v === 1 || v === 2) return v
+    return undefined
+  }
+
+  return {
+    soc: getNum('soc'),
+    batteryPower: getNum('batteryPower'),
+    acPower: getNum('acPower'),
+    solarPower: getNum('solarPower'),
+    outputPower: getNum('outputPower'),
+    batteryTemp: getNum('batteryTemp'),
+    acOut1Enable: getBool('acOut1Enable'),
+    acOut2Enable: getBool('acOut2Enable'),
+    usbOut1Enable: getBool('usbOut1Enable'),
+    sleepMode: getBool('sleepMode'),
+    workMode: getInt('workMode'),
+  }
+}
+
+/** 将 firingAlarms 映射为 DeviceAlert[] */
+export function mapFiringAlarms(
+  alarms: DeviceStateResponse['firing_alarms']
+): DeviceAlert[] {
+  return alarms.map(a => ({
+    alarmId: a.alarmId,
+    alarmCode: a.alarmCode,
+    alarmMessage: a.alarmMessage,
+    severity: (a.severity as DeviceAlert['severity']) ?? 'info',
+    timestamp: a.timestamp,
+    isProcessed: false,
+  }))
+}
+
+================================================================================
+6. Store 集成状态
+================================================================================
+
+文件路径: src/stores/deviceStore.ts
+
+已集成到 Zustand Store 的 API:
+  ✅ loadDevices             → fetchDeviceList
+  ✅ loadDeviceDetails      → fetchDeviceDetails
+  ✅ loadDeviceState       → fetchDeviceState
+  ✅ addNewDevice          → addDevice
+  ✅ addNewDeviceWithStation → addDeviceWithStation
+  ✅ deleteDevice          → deleteDevice (UI 已移除删除按钮)
+  ✅ updateDeviceInfo      → updateDevice
+  ✅ togglePin             → pinDevice / unpinDevice
+  ✅ controlDevice         → writeDeviceConfig
+  ✅ startRealtimeReport   → startFastReport
+  ✅ stopRealtimeReport    → stopFastReport
+  ✅ loadAlarms            → fetchAlarms
+  ✅ dismissAlarm          → ignoreAlarm
+  ✅ loadPeakValley       → fetchPeakValleyConfig
+  ✅ enablePeakValley      → setPeakValleyEnabled
+  ✅ savePeakValleyGeneral → setPeakValleyGeneral
+  ✅ loadEnergyFlow        → fetchSimpleEnergyFlow
+  ✅ loadHistoryData       → fetchHistoryData  ← 本次新增
+
+Store 中的状态字段:
+  devices: DeviceListItem[]
+  deviceTotal: number
+  devicePage: number
+  deviceLoading: boolean
+  selectedDeviceId: string | null
+  selectedDeviceDetails: DeviceListItem | null
+  selectedDeviceState: DeviceStateResponse | null
+  stateLoading: boolean
+  stations: StationItem[]
+  stationTotal: number
+  alarms: AlarmItem[]
+  alarmTotal: number
+  alarmLoading: boolean
+  energyFlow: EnergyFlowData | null
+  energyFlowLoading: boolean
+  energyFlowError: string | null
+  peakValleyConfig: PeakValleyBundleResponse | null
+  peakValleyLoading: boolean
+  peakValleySaving: boolean
+  peakValleyError: string | null
+  historyData: HistoryDataResponse | null      ← 本次新增
+  historyLoading: boolean                      ← 本次新增
+  historyError: string | null                 ← 本次新增
+
+================================================================================
+7. 对接优先级建议
+================================================================================
+
+【立即处理（P0）】
+  1. 完成 StatsPage 历史数据展示（进行中）
+  2. 实现添加设备 UI 和流程
+  3. 实现忘记密码功能
+  4. 实现重置密码功能
+
+【近期处理（P1）】
+  5. 实现电站详情页
+  6. 实现电站编辑/删除功能
+  7. 实现设备配置读取缓存
+  8. 实现告警详情和删除
+  9. 完善削峰填谷自定义配置
+
+【长期规划（P2）】
+  10. 实现设备应用模式切换
+  11. 实现固件升级功能
+  12. 实现设备分享功能
+  13. 实现更多历史数据图表（Week/Month/Range）
+
+================================================================================
+  文档结束
+================================================================================
