@@ -3,52 +3,61 @@
 @tailwind utilities;
 
 /* ============================================================
-   设计令牌系统 Design Tokens - 扁平化
+   设计令牌系统 Design Tokens - PRD v1.1 规范
 ============================================================ */
 :root {
   /* 主色调 - 青绿扁平色系 */
-  --clr-primary: #0D9488;
+  --clr-primary: #01D6BE;
   --clr-primary-dim: #01A88F;
-  --clr-accent: #0D9488;
+  --clr-accent: #01D6BE;
   --clr-accent-dim: #01A88F;
   --clr-warning: #FF9500;
   --clr-danger: #FF3B30;
   --clr-success: #34C759;
+  --clr-gold: #FFD700;
 
   /* 深色背景层次 */
-  --bg-base: #000000;
-  --bg-surface: #0A0A0A;
-  --bg-card: #1C1C1E;
-  --bg-card-hover: #2C2C2E;
-  --bg-overlay: #111111;
-  --bg-input: #1C1C1E;
+  --bg-base: #141414;
+  --bg-surface: #1A1A1A;
+  --bg-card: #262626;
+  --bg-card-hover: #333333;
+  --bg-overlay: #1C1C1C;
+  --bg-input: #262626;
 
-  /* 文字系统 */
+  /* 文字系统 (WCAG AA 合规) */
   --txt-primary: #FFFFFF;
-  --txt-secondary: #8E8E93;
-  --txt-muted: #48484A;
+  --txt-secondary: #A0A0A5;
+  --txt-muted: #636366;
   --txt-label: #AEAEB2;
 
   /* 边框 */
   --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-normal: rgba(13, 148, 136, 0.2);
-  --border-bright: rgba(13, 148, 136, 0.45);
+  --border-normal: rgba(1, 214, 190, 0.2);
+  --border-bright: rgba(1, 214, 190, 0.45);
+
+  /* 焦点环 (WCAG) */
+  --ring-focus: #01D6BE;
 
   /* 圆角 */
   --r-sm: 8px;
   --r-md: 14px;
-  --r-lg: 18px;
-  --r-xl: 24px;
+  --r-lg: 20px;
+  --r-xl: 28px;
   --r-full: 9999px;
+
+  /* 北美本地化默认值 */
+  --unit-temp: '°F';
+  --unit-currency: '$';
+  --time-format: '12h';
 }
 
 /* ============================================================
    全局重置
 ============================================================ */
-*, *::before, *::after { 
-  box-sizing: border-box; 
-  margin: 0; 
-  padding: 0; 
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 html, body, #root {
@@ -77,6 +86,26 @@ body {
 
 .safe-area-bottom {
   padding-bottom: env(safe-area-inset-bottom, 34px);
+}
+
+/* ============================================================
+   WCAG 无障碍 - 焦点指示器
+============================================================ */
+*:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg-base), 0 0 0 4px var(--ring-focus);
+  border-radius: 4px;
+}
+
+/* ============================================================
+   WCAG 无障碍 - 动效减弱
+============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* ============================================================
@@ -121,24 +150,24 @@ body {
   letter-spacing: 0.5px;
 }
 
-.badge-success { 
-  background: rgba(52,199,89,0.12); 
-  color: var(--clr-success); 
+.badge-success {
+  background: rgba(52,199,89,0.12);
+  color: var(--clr-success);
 }
 
-.badge-warning { 
-  background: rgba(255,149,0,0.12); 
-  color: var(--clr-warning); 
+.badge-warning {
+  background: rgba(255,149,0,0.12);
+  color: var(--clr-warning);
 }
 
-.badge-danger { 
-  background: rgba(255,59,48,0.12); 
-  color: var(--clr-danger); 
+.badge-danger {
+  background: rgba(255,59,48,0.12);
+  color: var(--clr-danger);
 }
 
-.badge-primary { 
-  background: rgba(13,148,136,0.12); 
-  color: var(--clr-primary); 
+.badge-primary {
+  background: rgba(1,214,190,0.12);
+  color: var(--clr-primary);
 }
 
 /* 进度条 - 扁平纯色 */
@@ -156,20 +185,20 @@ body {
   transition: width 0.6s ease;
 }
 
-.progress-fill.green { 
-  background: #0D9488; 
+.progress-fill.green {
+  background: #01D6BE;
 }
 
-.progress-fill.blue { 
-  background: #0D9488; 
+.progress-fill.blue {
+  background: #01D6BE;
 }
 
-.progress-fill.orange { 
-  background: #FF9500; 
+.progress-fill.orange {
+  background: #FF9500;
 }
 
-.progress-fill.red { 
-  background: #FF3B30; 
+.progress-fill.red {
+  background: #FF3B30;
 }
 
 /* 分隔线 */
@@ -177,4 +206,84 @@ body {
   height: 1px;
   background: var(--border-subtle);
   margin: 14px 0;
+}
+
+/* ============================================================
+   DEMO MODE 横幅 (PRD v1.1 数据信任体系)
+============================================================ */
+.demo-banner {
+  background: rgba(255, 149, 0, 0.15);
+  border-bottom: 1px dashed rgba(255, 149, 0, 0.4);
+  color: #FF9500;
+  text-align: center;
+  padding: 6px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  position: relative;
+  z-index: 50;
+}
+
+.demo-banner::before {
+  content: '⚠';
+  margin-right: 6px;
+}
+
+/* Demo Mode 虚线处理 */
+.demo-mode .card {
+  border: 1px dashed rgba(255, 149, 0, 0.3);
+}
+
+/* ============================================================
+   数据来源标签 (PRD v1.1)
+============================================================ */
+.data-source-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: var(--r-full);
+  letter-spacing: 0.3px;
+}
+
+.data-source-ble {
+  background: rgba(1, 214, 190, 0.12);
+  color: #01D6BE;
+}
+
+.data-source-modbus {
+  background: rgba(88, 166, 255, 0.12);
+  color: #58A6FF;
+}
+
+.data-source-demo {
+  background: rgba(255, 149, 0, 0.12);
+  color: #FF9500;
+}
+
+.data-source-cloud {
+  background: rgba(168, 85, 247, 0.12);
+  color: #A855F7;
+}
+
+/* ============================================================
+   Skeleton 骨架屏 (PRD v1.1 Shimmer)
+============================================================ */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-card) 25%,
+    rgba(255, 255, 255, 0.06) 50%,
+    var(--bg-card) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s ease-in-out infinite;
+  border-radius: var(--r-md);
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { Share2, BarChart3, WifiOff, Leaf, RefreshCw } from 'lucide-react'
 import BatteryRing from '../components/BatteryRing'
+import { DataSourceTag, LastSync, SampleRate, CalcAudit, type DataSource } from '../components/DataTrust'
 import { useDeviceStore } from '../stores/deviceStore'
 import { mapFieldsToRealtime, type HistoryDataResponse } from '../api/deviceApi'
 
@@ -232,7 +233,7 @@ function getDemoChartFrame(period: Period): ChartFrame {
 function ChartSkeleton() {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-      className="bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] rounded-[20px] p-5 mb-4">
+      className="bg-[#262626] border border-[rgba(1,214,190,0.08)] rounded-[20px] p-5 mb-4">
       <div className="flex items-center gap-2 mb-3">
         <div className="w-8 h-8 rounded-lg bg-[rgba(255,255,255,0.05)] animate-pulse" />
         <div className="h-4 w-24 bg-[rgba(255,255,255,0.05)] rounded animate-pulse" />
@@ -246,7 +247,7 @@ function ChartSkeleton() {
 function ChartAreaSkeleton() {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-      className="bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] rounded-[20px] p-4 mb-4">
+      className="bg-[#262626] border border-[rgba(1,214,190,0.08)] rounded-[20px] p-4 mb-4">
       <div className="h-4 w-28 bg-[rgba(255,255,255,0.05)] rounded animate-pulse mb-4" />
       <div className="h-[140px] bg-[rgba(255,255,255,0.02)] rounded-[14px] animate-pulse" />
     </motion.div>
@@ -258,12 +259,12 @@ function ChartAreaSkeleton() {
 function ChartEmptyState({ message }: { message: string }) {
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col items-center justify-center py-12 px-6 bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] rounded-[20px] mb-4">
+      className="flex flex-col items-center justify-center py-12 px-6 bg-[#262626] border border-[rgba(1,214,190,0.08)] rounded-[20px] mb-4">
       <div className="w-14 h-14 rounded-2xl bg-[rgba(255,255,255,0.03)] flex items-center justify-center mb-3">
-        <BarChart3 size={28} className="text-[#48484A]" />
+        <BarChart3 size={28} className="text-[#636366]" />
       </div>
       <p className="text-[14px] font-semibold text-[#FFFFFF] mb-1">No history data yet</p>
-      <p className="text-[12px] text-[#8E8E93] text-center leading-relaxed">{message}</p>
+      <p className="text-[12px] text-[#A0A0A5] text-center leading-relaxed">{message}</p>
     </motion.div>
   )
 }
@@ -274,7 +275,8 @@ function ChartEmptyState({ message }: { message: string }) {
 
 export default function StatsPage() {
   const [period, setPeriod] = useState<Period>('Day')
-
+  // PRD v1.1 §8.2: 上次同步时间
+  const [lastSyncAt, setLastSyncAt] = useState<number | undefined>(Date.now())
   const {
     devices,
     selectedDeviceId,
@@ -285,6 +287,9 @@ export default function StatsPage() {
     historyError,
     loadHistoryData,
   } = useDeviceStore()
+
+  // PRD v1.1 §8.2: 当 historyError 出现时, 自动进入 Demo 模式
+  const useDemo = !!historyError && !historyLoading
 
   // 确定当前设备 ID
   const deviceId = useMemo(() => {
@@ -401,16 +406,16 @@ export default function StatsPage() {
   const noDevice = (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
       className="flex flex-col items-center justify-center py-20 px-8">
-      <div className="w-16 h-16 rounded-2xl bg-[#1C1C1E] flex items-center justify-center mb-4">
-        <BarChart3 size={32} className="text-[#48484A]" />
+      <div className="w-16 h-16 rounded-2xl bg-[#262626] flex items-center justify-center mb-4">
+        <BarChart3 size={32} className="text-[#636366]" />
       </div>
       <h3 className="text-[16px] font-bold text-[#FFFFFF] mb-2">No Data Yet</h3>
-      <p className="text-[13px] text-[#8E8E93] text-center leading-relaxed mb-6">
+      <p className="text-[13px] text-[#A0A0A5] text-center leading-relaxed mb-6">
         Connect a device to start tracking energy usage and statistics.
       </p>
-      <div className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-[#1C1C1E] border border-[rgba(255,255,255,0.06)]">
-        <WifiOff size={14} className="text-[#48484A]" />
-        <span className="text-[12px] text-[#48484A]">No device connected</span>
+      <div className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-[#262626] border border-[rgba(255,255,255,0.06)]">
+        <WifiOff size={14} className="text-[#636366]" />
+        <span className="text-[12px] text-[#636366]">No device connected</span>
       </div>
     </motion.div>
   )
@@ -428,21 +433,26 @@ export default function StatsPage() {
     ) : null
 
   return (
-    <div className="h-full flex flex-col bg-[#000000] overflow-hidden pt-6">
+    <div className="h-full flex flex-col bg-[#141414] overflow-hidden pt-6">
       {/* Header */}
       <div className="px-5 pt-8 pb-2 safe-area-top flex justify-between items-start">
         <div>
-          <h2 className="text-xl font-bold text-[#FFFFFF]">Energy Stats</h2>
-          <p className="text-xs text-[#8E8E93] mt-1">
+          <h2 className="text-xl font-bold text-[#FFFFFF]">Insights</h2>
+          <p className="text-xs text-[#A0A0A5] mt-1">
             {deviceDays > 0
               ? `${deviceDays} Days · ${deviceName ?? 'Device'}`
               : (deviceName ? `${deviceName}` : 'Select a device')
             }
           </p>
+          {/* PRD v1.1 §8: 数据来源 + 同步时间 */}
+          <div className="flex items-center gap-2 mt-1.5">
+            <DataSourceTag source={useDemo ? 'demo' : 'cloud'} />
+            <LastSync lastSyncAt={lastSyncAt} />
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button
-            className="w-9 h-9 flex items-center justify-center rounded-full bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] text-[#8E8E93] hover:text-[#01D6BE] transition-colors"
+            className="w-9 h-9 flex items-center justify-center rounded-full bg-[#262626] border border-[rgba(1,214,190,0.08)] text-[#A0A0A5] hover:text-[#01D6BE] transition-colors"
             onClick={() => {
               if (navigator.share && chartFrame) {
                 navigator.share({
@@ -455,13 +465,13 @@ export default function StatsPage() {
           >
             <Share2 size={18} />
           </button>
-          <div className="flex bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] rounded-full p-1">
+          <div className="flex bg-[#262626] border border-[rgba(1,214,190,0.08)] rounded-full p-1">
             {periods.map((p) => (
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
                 className={`text-[10px] font-semibold px-2.5 py-1 rounded-full transition-all duration-200
-                  ${period === p ? 'bg-[#01D6BE] text-[#000000]' : 'text-[#8E8E93] hover:text-[#FFFFFF]'}`}
+                  ${period === p ? 'bg-[#01D6BE] text-[#000000]' : 'text-[#A0A0A5] hover:text-[#FFFFFF]'}`}
               >
                 {p}
               </button>
@@ -493,7 +503,7 @@ export default function StatsPage() {
                 {/* CO2 Card */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                  className="bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] rounded-[20px] p-5 mb-4 relative overflow-hidden"
+                  className="bg-[#262626] border border-[rgba(1,214,190,0.08)] rounded-[20px] p-5 mb-4 relative overflow-hidden"
                 >
                   <div className="absolute top-0 left-0 right-0 h-px bg-[rgba(1,214,190,0.15)]" />
                   <div className="flex items-center gap-2 mb-3">
@@ -506,25 +516,36 @@ export default function StatsPage() {
                     <span className="text-[36px] font-extrabold text-[#34C759] leading-none">
                       {chartFrame.co2Kg}
                     </span>
-                    <span className="text-[14px] text-[#8E8E93]">Kg</span>
+                    <span className="text-[14px] text-[#A0A0A5]">Kg</span>
                   </div>
-                  <p className="text-[12px] text-[#8E8E93]">{chartFrame.ecoInsight}</p>
+                  <p className="text-[12px] text-[#A0A0A5]">{chartFrame.ecoInsight}</p>
+                  {/* PRD v1.1 §8.3: 计算逻辑可审计 */}
+                  <div className="mt-3">
+                    <CalcAudit
+                      formula={`Solar generated: ${chartFrame.totalInputKwh} kWh
+Grid CO2 factor: 0.5 kg CO₂/kWh (US EPA average)
+CO₂ avoided: ${chartFrame.totalInputKwh} kWh × 0.5 kg/kWh = ${chartFrame.co2Kg} kg
+
+Data source: US EPA eGRID 2024 average emission rate`}
+                      label="How we calculated CO₂"
+                    />
+                  </div>
                 </motion.div>
 
                 {/* Input vs Output Chart */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.05 }}
-                  className="bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] rounded-[20px] p-4 mb-4"
+                  className="bg-[#262626] border border-[rgba(1,214,190,0.08)] rounded-[20px] p-4 mb-4"
                 >
                   <div className="flex justify-between items-center mb-4">
                     <div className="text-sm font-bold text-[#FFFFFF]">Input vs Output</div>
                     <div className="flex gap-3">
-                      <div className="flex items-center gap-1.5 text-[10px] text-[#8E8E93]">
+                      <div className="flex items-center gap-1.5 text-[10px] text-[#A0A0A5]">
                         <div className="w-2 h-2 rounded-full bg-[#01D6BE]" />
                         <span>Solar (W)</span>
                       </div>
-                      <div className="flex items-center gap-1.5 text-[10px] text-[#8E8E93]">
+                      <div className="flex items-center gap-1.5 text-[10px] text-[#A0A0A5]">
                         <div className="w-2 h-2 rounded-full bg-[#01A88F]" />
                         <span>Output (W)</span>
                       </div>
@@ -554,7 +575,7 @@ export default function StatsPage() {
                       <div className="h-px bg-[rgba(1,214,190,0.08)] my-1.5" />
                       <div className="flex gap-2">
                         {chartFrame.labels.map((day) => (
-                          <div key={day} className="flex-1 text-center text-[9px] text-[#48484A]">{day}</div>
+                          <div key={day} className="flex-1 text-center text-[9px] text-[#636366]">{day}</div>
                         ))}
                       </div>
                     </div>
@@ -583,7 +604,7 @@ export default function StatsPage() {
                       </svg>
                       <div className="flex justify-between px-1">
                         {chartFrame.labels.filter((_, i) => i % Math.max(1, Math.floor(chartFrame.labels.length / 6)) === 0).map((label) => (
-                          <span key={label} className="text-[9px] text-[#48484A]">{label}</span>
+                          <span key={label} className="text-[9px] text-[#636366]">{label}</span>
                         ))}
                       </div>
                     </div>
@@ -591,7 +612,7 @@ export default function StatsPage() {
 
                   {/* AI Insight */}
                   <div className="mt-4 pt-3 border-t border-[rgba(1,214,190,0.06)]">
-                    <p className="text-[11px] text-[#8E8E93]">
+                    <p className="text-[11px] text-[#A0A0A5]">
                       <span className="text-[#01D6BE] font-semibold">Insight: </span>
                       {chartFrame.insight}
                     </p>
@@ -605,7 +626,7 @@ export default function StatsPage() {
               <motion.div
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="bg-[#1C1C1E] border border-[rgba(1,214,190,0.08)] rounded-[20px] p-4"
+                className="bg-[#262626] border border-[rgba(1,214,190,0.08)] rounded-[20px] p-4"
               >
                 <div className="flex justify-between items-center mb-3">
                   <div className="text-sm font-bold text-[#FFFFFF]">Battery Health</div>
@@ -626,21 +647,21 @@ export default function StatsPage() {
                   <div className="flex-1 grid grid-cols-2 gap-3">
                     <div className="text-center bg-[rgba(255,255,255,0.03)] rounded-[12px] p-2.5">
                       <div className="text-[14px] font-bold text-[#FFFFFF]">{soc}%</div>
-                      <div className="text-[9px] text-[#8E8E93] mt-0.5">Charge</div>
+                      <div className="text-[9px] text-[#A0A0A5] mt-0.5">Charge</div>
                     </div>
                     <div className="text-center bg-[rgba(255,255,255,0.03)] rounded-[12px] p-2.5">
                       <div className="text-[14px] font-bold text-[#34C759]">
                         {batteryTemp > 0 ? `${batteryTemp}°C` : '--'}
                       </div>
-                      <div className="text-[9px] text-[#8E8E93] mt-0.5">Temp</div>
+                      <div className="text-[9px] text-[#A0A0A5] mt-0.5">Temp</div>
                     </div>
                     <div className="text-center bg-[rgba(255,255,255,0.03)] rounded-[12px] p-2.5">
                       <div className="text-[14px] font-bold text-[#01D6BE]">{deviceDays}</div>
-                      <div className="text-[9px] text-[#8E8E93] mt-0.5">Days</div>
+                      <div className="text-[9px] text-[#A0A0A5] mt-0.5">Days</div>
                     </div>
                     <div className="text-center bg-[rgba(255,255,255,0.03)] rounded-[12px] p-2.5">
                       <div className="text-[14px] font-bold text-[#FF9500]">{batteryHealth}%</div>
-                      <div className="text-[9px] text-[#8E8E93] mt-0.5">Health</div>
+                      <div className="text-[9px] text-[#A0A0A5] mt-0.5">Health</div>
                     </div>
                   </div>
                 </div>

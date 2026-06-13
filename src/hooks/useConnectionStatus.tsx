@@ -94,7 +94,7 @@ export function useConnectionStatus(opts: UseConnectionStatusOptions = {}) {
       if (bleConnected) statusLabel = `BLE · ${bleConnection.deviceName ?? 'Connected'}`
       else if (serialConnected) statusLabel = 'Serial · Connected'
       else statusLabel = 'Cloud · Live'
-      statusColor = '#0D9488'  // Primary
+      statusColor = '#01D6BE'  // Primary
     } else if (wsStatus === 'connecting' || bleConnection.status === 'connecting' || bleConnection.status === 'scanning') {
       health = 'degraded'
       statusLabel = 'Connecting...'
@@ -106,11 +106,11 @@ export function useConnectionStatus(opts: UseConnectionStatusOptions = {}) {
     } else if (activeDataSource === 'simulator') {
       health = 'unknown'
       statusLabel = 'Demo Mode'
-      statusColor = '#8E8E93'  // Text Secondary
+      statusColor = '#A0A0A5'  // Text Secondary
     } else {
       health = 'unknown'
       statusLabel = 'Disconnected'
-      statusColor = '#48484A'  // Text Muted
+      statusColor = '#636366'  // Text Muted
     }
 
     return {

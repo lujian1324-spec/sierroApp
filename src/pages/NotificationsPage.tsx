@@ -45,12 +45,12 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="h-full flex flex-col bg-[#000000] overflow-hidden">
+    <div className="h-full flex flex-col bg-[#141414] overflow-hidden">
       {/* Header */}
       <div className="px-5 pt-4 pb-3 safe-area-top flex items-center gap-3">
         <button
           onClick={() => navigate(-1)}
-          className="w-9 h-9 rounded-full bg-[#1C1C1E] flex items-center justify-center text-[#FFFFFF]"
+          className="w-9 h-9 rounded-full bg-[#262626] flex items-center justify-center text-[#FFFFFF]"
         >
           <ArrowLeft size={20} />
         </button>
@@ -61,7 +61,7 @@ export default function NotificationsPage() {
       <div className="flex-1 overflow-y-auto scrollbar-hide px-5 pb-4">
         {dateOrder.filter(d => grouped[d]).map(date => (
           <div key={date} className="mb-5">
-            <div className="text-[11px] font-bold text-[#8E8E93] tracking-widest uppercase mb-2 px-1">
+            <div className="text-[11px] font-bold text-[#A0A0A5] tracking-widest uppercase mb-2 px-1">
               {date}
             </div>
             <div className="flex flex-col gap-2">
@@ -71,7 +71,7 @@ export default function NotificationsPage() {
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: index * 0.05 }}
-                  className="bg-[#1C1C1E] rounded-[18px] p-4"
+                  className="bg-[#262626] rounded-[18px] p-4"
                 >
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 rounded-[12px] bg-[rgba(255,255,255,0.06)] flex items-center justify-center flex-shrink-0">
@@ -82,10 +82,10 @@ export default function NotificationsPage() {
                         <span className="text-[13px] font-semibold text-[#FFFFFF]">
                           {getTitle(item.type)}
                         </span>
-                        <span className="text-[10px] text-[#8E8E93] flex-shrink-0 ml-2">{item.time}</span>
+                        <span className="text-[10px] text-[#A0A0A5] flex-shrink-0 ml-2">{item.time}</span>
                       </div>
-                      <div className="text-[11px] text-[#8E8E93]">{item.deviceName}</div>
-                      <div className="text-[12px] text-[#48484A] mt-1">{item.description}</div>
+                      <div className="text-[11px] text-[#A0A0A5]">{item.deviceName}</div>
+                      <div className="text-[12px] text-[#636366] mt-1">{item.description}</div>
                     </div>
                   </div>
                 </motion.div>

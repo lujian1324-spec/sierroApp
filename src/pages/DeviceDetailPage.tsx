@@ -76,7 +76,7 @@ export default function DeviceDetailPage({ onBack }: DeviceDetailPageProps) {
       label: 'Battery Capacity', 
       value: powerStation.specs.batteryCapacity, 
       desc: powerStation.specs.batteryType,
-      color: '#0D9488',
+      color: '#01D6BE',
       editKeys: ['batteryCapacity', 'batteryType']
     },
     { 
@@ -114,21 +114,21 @@ export default function DeviceDetailPage({ onBack }: DeviceDetailPageProps) {
       label: 'Charge Cycles', 
       value: `${powerStation.cycleCount}`, 
       desc: 'Total charge cycles completed',
-      color: '#0D9488' 
+      color: '#01D6BE' 
     },
     { 
       icon: Calendar, 
       label: 'Manufactured', 
       value: '2024-01', 
       desc: 'Serial: SR-1000-8842',
-      color: '#8E8E93' 
+      color: '#A0A0A5' 
     },
     { 
       icon: Hash, 
       label: 'Firmware Version', 
       value: `v${appVersion.version}`, 
       desc: `Build ${appVersion.build}`,
-      color: '#8E8E93' 
+      color: '#A0A0A5' 
     },
   ]
 
@@ -140,7 +140,7 @@ export default function DeviceDetailPage({ onBack }: DeviceDetailPageProps) {
       detail: bleConnection.status === 'connected' 
         ? `${bleConnection.deviceName ?? 'Device'} · ${bleConnection.rssi ? `${bleConnection.rssi} dBm` : 'Active'}`
         : 'Tap to connect in Settings',
-      color: bleConnection.status === 'connected' ? '#0D9488' : '#48484A',
+      color: bleConnection.status === 'connected' ? '#01D6BE' : '#636366',
     },
     {
       icon: Usb,
@@ -149,7 +149,7 @@ export default function DeviceDetailPage({ onBack }: DeviceDetailPageProps) {
       detail: serialConnection.status === 'connected'
         ? 'RS485 · 9600 bps · 8N1'
         : 'Tap to connect in Settings',
-      color: serialConnection.status === 'connected' ? '#A855F7' : '#48484A',
+      color: serialConnection.status === 'connected' ? '#A855F7' : '#636366',
     },
     {
       icon: Wifi,
@@ -241,20 +241,20 @@ export default function DeviceDetailPage({ onBack }: DeviceDetailPageProps) {
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: '100%' }}
       transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-      className="fixed inset-0 z-50 bg-[#000000] flex flex-col"
+      className="fixed inset-0 z-50 bg-[#141414] flex flex-col"
     >
       {/* Header */}
       <div className="px-5 pt-4 pb-4 safe-area-top flex items-center gap-3">
         <button
           onClick={onBack}
-          className="w-9 h-9 rounded-full bg-[#1C1C1E] flex items-center justify-center
+          className="w-9 h-9 rounded-full bg-[#262626] flex items-center justify-center
             active:scale-95 transition-transform"
         >
           <ChevronLeft size={20} className="text-[#FFFFFF]" />
         </button>
         <div>
           <h2 className="text-lg font-bold text-[#FFFFFF]">Device Details</h2>
-          <p className="text-xs text-[#8E8E93]">{powerStation.name}</p>
+          <p className="text-xs text-[#A0A0A5]">{powerStation.name}</p>
         </div>
       </div>
 
@@ -267,9 +267,9 @@ export default function DeviceDetailPage({ onBack }: DeviceDetailPageProps) {
           transition={{ delay: 0.1 }}
           className="flex flex-col items-center py-6"
         >
-          <div className="w-20 h-20 rounded-[24px] bg-[#1C1C1E] border border-[rgba(13,148,136,0.2)]
+          <div className="w-20 h-20 rounded-[24px] bg-[#262626] border border-[rgba(1,214,190,0.2)]
             flex items-center justify-center mb-4">
-            <Battery size={36} className="text-[#0D9488]" />
+            <Battery size={36} className="text-[#01D6BE]" />
           </div>
           
           {/* 可编辑的设备名称 */}
@@ -283,20 +283,20 @@ export default function DeviceDetailPage({ onBack }: DeviceDetailPageProps) {
                   onChange={(e) => setEditName(e.target.value)}
                   onKeyDown={handleNameKeyDown}
                   onBlur={handleSaveName}
-                  className="text-xl font-bold text-[#FFFFFF] tracking-wide bg-transparent border-b-2 border-[#0D9488] outline-none w-[180px] text-center"
+                  className="text-xl font-bold text-[#FFFFFF] tracking-wide bg-transparent border-b-2 border-[#01D6BE] outline-none w-[180px] text-center"
                   maxLength={20}
                 />
                 <button 
                   onClick={handleSaveName}
-                  className="w-7 h-7 rounded-full bg-[#0D9488] flex items-center justify-center"
+                  className="w-7 h-7 rounded-full bg-[#01D6BE] flex items-center justify-center"
                 >
                   <Check size={14} className="text-[#000000]" />
                 </button>
                 <button 
                   onClick={handleCancelEditName}
-                  className="w-7 h-7 rounded-full bg-[#2C2C2E] flex items-center justify-center"
+                  className="w-7 h-7 rounded-full bg-[#333333] flex items-center justify-center"
                 >
-                  <X size={14} className="text-[#8E8E93]" />
+                  <X size={14} className="text-[#A0A0A5]" />
                 </button>
               </div>
             ) : (
@@ -304,20 +304,20 @@ export default function DeviceDetailPage({ onBack }: DeviceDetailPageProps) {
                 <h3 className="text-xl font-bold text-[#FFFFFF]">{powerStation.name}</h3>
                 <button 
                   onClick={handleStartEditName}
-                  className="w-7 h-7 rounded-full bg-[#1C1C1E] flex items-center justify-center hover:bg-[#2C2C2E] transition-colors"
+                  className="w-7 h-7 rounded-full bg-[#262626] flex items-center justify-center hover:bg-[#333333] transition-colors"
                 >
-                  <Pencil size={14} className="text-[#8E8E93]" />
+                  <Pencil size={14} className="text-[#A0A0A5]" />
                 </button>
               </>
             )}
           </div>
-          <p className="text-sm text-[#8E8E93] mt-1">Sierro 1000 Portable Power Station</p>
+          <p className="text-sm text-[#A0A0A5] mt-1">Sierro 1000 Portable Power Station</p>
           
           {/* 状态标签 */}
           <div className="flex gap-2 mt-3">
             <span className={`text-[10px] px-2.5 py-1 rounded-full font-medium border
               ${activeDataSource === 'bluetooth'
-                ? 'bg-[rgba(13,148,136,0.12)] text-[#0D9488] border-[rgba(13,148,136,0.3)]'
+                ? 'bg-[rgba(1,214,190,0.12)] text-[#01D6BE] border-[rgba(1,214,190,0.3)]'
                 : activeDataSource === 'serial'
                 ? 'bg-[rgba(168,85,247,0.12)] text-[#A855F7] border-[rgba(168,85,247,0.3)]'
                 : 'bg-[rgba(52,199,89,0.08)] text-[#34C759] border-[rgba(52,199,89,0.2)]'}`}>
@@ -344,12 +344,12 @@ export default function DeviceDetailPage({ onBack }: DeviceDetailPageProps) {
           className="mb-5"
         >
           <div className="flex items-center justify-between mb-3 px-1">
-            <div className="text-[11px] font-bold text-[#8E8E93] tracking-widest uppercase">
+            <div className="text-[11px] font-bold text-[#A0A0A5] tracking-widest uppercase">
               Specifications
             </div>
-            <div className="text-[10px] text-[#48484A]">Tap to edit</div>
+            <div className="text-[10px] text-[#636366]">Tap to edit</div>
           </div>
-          <div className="bg-[#1C1C1E] border border-[rgba(13,148,136,0.08)] rounded-[20px] overflow-hidden">
+          <div className="bg-[#262626] border border-[rgba(1,214,190,0.08)] rounded-[20px] overflow-hidden">
             {deviceSpecs.map((item, i) => {
               const Icon = item.icon
               const isEditing = editingSpec === item.label
@@ -358,7 +358,7 @@ export default function DeviceDetailPage({ onBack }: DeviceDetailPageProps) {
                   key={item.label}
                   onClick={() => !isEditing && handleStartEditSpec(item.label)}
                   className={`flex items-start gap-3 px-4 py-4 cursor-pointer hover:bg-[rgba(255,255,255,0.02)] transition-colors
-                    ${i !== deviceSpecs.length - 1 ? 'border-b border-[rgba(13,148,136,0.08)]' : ''}`}
+                    ${i !== deviceSpecs.length - 1 ? 'border-b border-[rgba(1,214,190,0.08)]' : ''}`}
                 >
                   <div 
                     className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -374,19 +374,19 @@ export default function DeviceDetailPage({ onBack }: DeviceDetailPageProps) {
                       // 编辑模式
                       <div className="space-y-2">
                         <div className="flex items-center justify-between mb-1">
-                          <div className="text-[12px] text-[#8E8E93]">{item.label}</div>
+                          <div className="text-[12px] text-[#A0A0A5]">{item.label}</div>
                           <div className="flex items-center gap-1">
                             <button 
                               onClick={(e) => { e.stopPropagation(); handleSaveSpec(); }}
-                              className="w-6 h-6 rounded-full bg-[#0D9488] flex items-center justify-center"
+                              className="w-6 h-6 rounded-full bg-[#01D6BE] flex items-center justify-center"
                             >
                               <Check size={12} className="text-[#000000]" />
                             </button>
                             <button 
                               onClick={(e) => { e.stopPropagation(); handleCancelEditSpec(); }}
-                              className="w-6 h-6 rounded-full bg-[#2C2C2E] flex items-center justify-center"
+                              className="w-6 h-6 rounded-full bg-[#333333] flex items-center justify-center"
                             >
-                              <X size={12} className="text-[#8E8E93]" />
+                              <X size={12} className="text-[#A0A0A5]" />
                             </button>
                           </div>
                         </div>
@@ -397,7 +397,7 @@ export default function DeviceDetailPage({ onBack }: DeviceDetailPageProps) {
                             value={editSpecValues[key as keyof typeof editSpecValues]}
                             onChange={(e) => handleSpecChange(key as keyof typeof editSpecValues, e.target.value)}
                             onClick={(e) => e.stopPropagation()}
-                            className="w-full text-[12px] bg-[#2C2C2E] border border-[#3C3C3E] rounded-md px-2 py-1 text-[#FFFFFF] outline-none focus:border-[#0D9488]"
+                            className="w-full text-[12px] bg-[#333333] border border-[#3C3C3E] rounded-md px-2 py-1 text-[#FFFFFF] outline-none focus:border-[#01D6BE]"
                             placeholder={key}
                           />
                         ))}
@@ -406,11 +406,11 @@ export default function DeviceDetailPage({ onBack }: DeviceDetailPageProps) {
                       // 显示模式
                       <>
                         <div className="flex items-center justify-between mb-0.5">
-                          <div className="text-[12px] text-[#8E8E93]">{item.label}</div>
+                          <div className="text-[12px] text-[#A0A0A5]">{item.label}</div>
                           <div className="text-[14px] font-bold text-[#FFFFFF]">{item.value}</div>
                         </div>
                         <div className="text-[11px] text-[#FFFFFF] font-medium">{item.desc}</div>
-                        {item.subDesc && <div className="text-[10px] text-[#48484A] mt-0.5">{item.subDesc}</div>}
+                        {item.subDesc && <div className="text-[10px] text-[#636366] mt-0.5">{item.subDesc}</div>}
                       </>
                     )}
                   </div>
@@ -427,17 +427,17 @@ export default function DeviceDetailPage({ onBack }: DeviceDetailPageProps) {
           transition={{ delay: 0.3 }}
           className="mb-5"
         >
-          <div className="text-[11px] font-bold text-[#8E8E93] tracking-widest uppercase mb-3 px-1">
+          <div className="text-[11px] font-bold text-[#A0A0A5] tracking-widest uppercase mb-3 px-1">
             Device Status
           </div>
-          <div className="bg-[#1C1C1E] border border-[rgba(13,148,136,0.08)] rounded-[20px] overflow-hidden">
+          <div className="bg-[#262626] border border-[rgba(1,214,190,0.08)] rounded-[20px] overflow-hidden">
             {deviceStatus.map((item, i) => {
               const Icon = item.icon
               return (
                 <div 
                   key={item.label}
                   className={`flex items-center gap-3 px-4 py-3.5 
-                    ${i !== deviceStatus.length - 1 ? 'border-b border-[rgba(13,148,136,0.08)]' : ''}`}
+                    ${i !== deviceStatus.length - 1 ? 'border-b border-[rgba(1,214,190,0.08)]' : ''}`}
                 >
                   <div 
                     className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -450,7 +450,7 @@ export default function DeviceDetailPage({ onBack }: DeviceDetailPageProps) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-[13px] font-semibold text-[#FFFFFF]">{item.label}</div>
-                    <div className="text-[11px] text-[#8E8E93] mt-0.5">{item.desc}</div>
+                    <div className="text-[11px] text-[#A0A0A5] mt-0.5">{item.desc}</div>
                   </div>
                   <div className="text-[13px] font-semibold" style={{ color: item.color }}>
                     {item.value}
@@ -461,6 +461,151 @@ export default function DeviceDetailPage({ onBack }: DeviceDetailPageProps) {
           </div>
         </motion.div>
 
+        {/* PRD v1.1 §4.3: Display Icon 编辑 */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.32 }}
+          className="mb-5"
+        >
+          <div className="text-[11px] font-bold text-[#A0A0A5] tracking-widest uppercase mb-3 px-1">
+            Display Icon
+          </div>
+          <div className="bg-[#262626] rounded-[20px] p-4">
+            <div className="grid grid-cols-5 gap-2">
+              {['#01D6BE', '#34C759', '#FF9500', '#FF3B30', '#FFD700', '#AF52DE', '#5AC8FA', '#007AFF', '#8E8E93', '#FFFFFF'].map((color) => (
+                <button
+                  key={color}
+                  onClick={() => {
+                    // PRD: 更新设备图标颜色
+                    const updatedSettings = { ...settings, deviceIconColor: color }
+                    // 这里需要更新 store
+                  }}
+                  className={`w-10 h-10 rounded-full transition-transform hover:scale-110 ${
+                    settings.deviceIconColor === color ? 'ring-2 ring-[#FFFFFF] ring-offset-2 ring-offset-[#262626]' : ''
+                  }`}
+                  style={{ backgroundColor: color }}
+                  aria-label={`Set icon color to ${color}`}
+                />
+              ))}
+            </div>
+          </div>
+        </motion.div>
+
+        {/* PRD v1.1 §4.3: Sleep Mode + Battery Mode */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.34 }}
+          className="mb-5"
+        >
+          <div className="text-[11px] font-bold text-[#A0A0A5] tracking-widest uppercase mb-3 px-1">
+            Device Settings
+          </div>
+          <div className="bg-[#262626] rounded-[20px] overflow-hidden">
+            {/* Sleep Mode */}
+            <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[rgba(255,255,255,0.06)]">
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-[rgba(1,214,190,0.1)]">
+                <Battery size={16} className="text-[#01D6BE]" />
+              </div>
+              <div className="flex-1">
+                <div className="text-[13px] font-semibold text-[#FFFFFF]">Sleep Mode</div>
+                <div className="text-[11px] text-[#A0A0A5]">Turn off display to save energy</div>
+              </div>
+              <button
+                onClick={() => {
+                  // PRD: 切换 Sleep Mode
+                  // API: /remote/device/config/write
+                }}
+                className={`w-12 h-7 rounded-full transition-colors relative
+                  ${settings.sleepMode ? 'bg-[#01D6BE]' : 'bg-[#636366]'}`}
+                aria-label="Toggle Sleep Mode"
+              >
+                <div
+                  className="w-5 h-5 rounded-full bg-[#FFFFFF] absolute top-1 transition-left"
+                  style={{ left: settings.sleepMode ? '26px' : '4px' }}
+                />
+              </button>
+            </div>
+
+            {/* Battery Mode */}
+            <div className="px-4 py-3.5 border-b border-[rgba(255,255,255,0.06)]">
+              <div className="text-[13px] font-semibold text-[#FFFFFF] mb-3">Battery Mode</div>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { value: 0, label: 'Normal', desc: 'Standard operation' },
+                  { value: 1, label: 'Backup', desc: 'Reserve for outage' },
+                  { value: 2, label: 'Eco', desc: 'Extend lifespan' },
+                ].map((mode) => (
+                  <button
+                    key={mode.value}
+                    onClick={() => {
+                      // PRD: 切换 Battery Mode
+                      // API: /remote/device/config/write, key: workMode
+                    }}
+                    className={`p-3 rounded-[14px] text-center transition-colors
+                      ${settings.batteryMode === mode.value
+                        ? 'bg-[rgba(1,214,190,0.15)] border border-[#01D6BE]'
+                        : 'bg-[#333333] border border-transparent'
+                      }`}
+                  >
+                    <div className={`text-[12px] font-semibold ${settings.batteryMode === mode.value ? 'text-[#01D6BE]' : 'text-[#FFFFFF]'}`}>
+                      {mode.label}
+                    </div>
+                    <div className="text-[10px] text-[#636366] mt-0.5">{mode.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Smart Schedule Entry */}
+            <div
+              onClick={() => window.location.href = '/smart-schedule'}
+              className="flex items-center gap-3 px-4 py-3.5 cursor-pointer hover:bg-[#333333] transition-colors"
+            >
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-[rgba(1,214,190,0.1)]">
+                <Calendar size={16} className="text-[#01D6BE]" />
+              </div>
+              <div className="flex-1">
+                <div className="text-[13px] font-semibold text-[#FFFFFF]">Smart Schedule</div>
+                <div className="text-[11px] text-[#A0A0A5]">Manage peak shaving schedule</div>
+              </div>
+              <ChevronLeft size={18} className="text-[#636366] rotate-180" />
+            </div>
+          </div>
+        </motion.div>
+
+        {/* PRD v1.1 §4.3: Factory Reset */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.36 }}
+          className="mb-5"
+        >
+          <div className="text-[11px] font-bold text-[#A0A0A5] tracking-widest uppercase mb-3 px-1">
+            Danger Zone
+          </div>
+          <div className="bg-[#262626] rounded-[20px] p-4">
+            <button
+              onClick={() => {
+                // PRD: 弹出二次确认对话框
+                if (window.confirm('Are you sure you want to reset this device to factory settings? This action cannot be undone.')) {
+                  // API: /remote/device/config/write or specific factory reset endpoint
+                  console.log('Factory reset triggered')
+                }
+              }}
+              className="w-full h-11 rounded-[14px] bg-[rgba(255,59,48,0.1)] text-[#FF3B30] text-[13px] font-semibold
+                border border-[rgba(255,59,48,0.3)]
+                hover:bg-[rgba(255,59,48,0.2)] transition-colors"
+            >
+              Factory Reset
+            </button>
+            <p className="text-[10px] text-[#636366] mt-2 text-center">
+              This will erase all settings and restore factory defaults
+            </p>
+          </div>
+        </motion.div>
+
         {/* 连接状态 */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -468,17 +613,17 @@ export default function DeviceDetailPage({ onBack }: DeviceDetailPageProps) {
           transition={{ delay: 0.4 }}
           className="mb-5"
         >
-          <div className="text-[11px] font-bold text-[#8E8E93] tracking-widest uppercase mb-3 px-1">
+          <div className="text-[11px] font-bold text-[#A0A0A5] tracking-widest uppercase mb-3 px-1">
             Connection Status
           </div>
-          <div className="bg-[#1C1C1E] border border-[rgba(13,148,136,0.08)] rounded-[20px] overflow-hidden">
+          <div className="bg-[#262626] border border-[rgba(1,214,190,0.08)] rounded-[20px] overflow-hidden">
             {connectionStatus.map((item, i) => {
               const Icon = item.icon
               return (
                 <div 
                   key={item.label}
                   className={`flex items-center gap-3 px-4 py-3.5 
-                    ${i !== connectionStatus.length - 1 ? 'border-b border-[rgba(13,148,136,0.08)]' : ''}`}
+                    ${i !== connectionStatus.length - 1 ? 'border-b border-[rgba(1,214,190,0.08)]' : ''}`}
                 >
                   <div 
                     className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -491,7 +636,7 @@ export default function DeviceDetailPage({ onBack }: DeviceDetailPageProps) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-[13px] font-semibold text-[#FFFFFF]">{item.label}</div>
-                    <div className="text-[11px] text-[#8E8E93] mt-0.5">{item.detail}</div>
+                    <div className="text-[11px] text-[#A0A0A5] mt-0.5">{item.detail}</div>
                   </div>
                   <div 
                     className="text-[11px] px-2 py-0.5 rounded-full font-medium"
@@ -515,24 +660,24 @@ export default function DeviceDetailPage({ onBack }: DeviceDetailPageProps) {
           transition={{ delay: 0.5 }}
           className="mb-5"
         >
-          <div className="text-[11px] font-bold text-[#8E8E93] tracking-widest uppercase mb-3 px-1">
+          <div className="text-[11px] font-bold text-[#A0A0A5] tracking-widest uppercase mb-3 px-1">
             Safety & Certifications
           </div>
-          <div className="bg-[#1C1C1E] border border-[rgba(13,148,136,0.08)] rounded-[20px] p-4">
+          <div className="bg-[#262626] border border-[rgba(1,214,190,0.08)] rounded-[20px] p-4">
             <div className="flex items-start gap-3 mb-3">
               <div className="w-9 h-9 rounded-lg bg-[rgba(52,199,89,0.1)] flex items-center justify-center flex-shrink-0">
                 <Shield size={16} className="text-[#34C759]" />
               </div>
               <div>
                 <div className="text-[13px] font-semibold text-[#FFFFFF]">Safety Certified</div>
-                <div className="text-[11px] text-[#8E8E93]">UL2743, CE, FCC, PSE, RoHS</div>
+                <div className="text-[11px] text-[#A0A0A5]">UL2743, CE, FCC, PSE, RoHS</div>
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
               {['BMS Protection', 'Overcharge Protection', 'Short Circuit Protection', 'Temperature Control'].map((tag) => (
                 <span 
                   key={tag} 
-                  className="text-[10px] px-2 py-1 rounded-full bg-[rgba(255,255,255,0.05)] text-[#8E8E93]"
+                  className="text-[10px] px-2 py-1 rounded-full bg-[rgba(255,255,255,0.05)] text-[#A0A0A5]"
                 >
                   {tag}
                 </span>
@@ -542,7 +687,7 @@ export default function DeviceDetailPage({ onBack }: DeviceDetailPageProps) {
         </motion.div>
 
         {/* 底部信息 */}
-        <div className="text-center pt-4 text-[11px] text-[#48484A]">
+        <div className="text-center pt-4 text-[11px] text-[#636366]">
           <div>Sierro Inc.</div>
           <div className="mt-1">Made with precision in Shenzhen</div>
         </div>

@@ -1,60 +1,56 @@
-﻿import { NavLink } from 'react-router-dom'
-import { 
-  Home, 
-  BarChart3, 
+import { NavLink } from 'react-router-dom'
+import {
+  Home,
+  BarChart3,
   Settings,
 } from 'lucide-react'
 
+// PRD v1.1: 导航标签大写, 路径使用新路由
 const navItems = [
-  { path: '/', label: 'Devices', icon: Home },
-  { path: '/stats', label: 'Stats', icon: BarChart3 },
-  { path: '/settings', label: 'Settings', icon: Settings },
+  { path: '/devices', label: 'Devices', icon: Home, tabId: 'nav-devices' },
+  { path: '/insights', label: 'Stats', icon: BarChart3, tabId: 'nav-insights' },
+  { path: '/setting', label: 'Setting', icon: Settings, tabId: 'nav-setting' },
 ]
 
 export default function BottomNavigation() {
   return (
-    <nav 
-      className="flex justify-around items-center py-2 pb-6 px-2 
-      bg-[#000000]/95 backdrop-blur-xl 
-      border-t border-[rgba(255,255,255,0.07)]
-      safe-area-bottom"
-    >
-      {navItems.map((item) => {
-        const Icon = item.icon
-        return (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            end={item.path === '/'}
-            className={({ isActive }) => `
-              flex flex-col items-center gap-1 
-              px-6 py-1.5 rounded-[14px]
-              transition-all duration-250 ease-out
-              relative
-              ${isActive 
-                ? 'bg-[rgba(13,148,136,0.1)]' 
-                : 'hover:bg-[rgba(255,255,255,0.03)]'
+    <div className="flex justify-center items-end pb-6 pt-2 bg-transparent pointer-events-none safe-area-bottom">
+      <nav
+        className="flex items-center gap-1 px-2 py-2 rounded-full bg-[#0E3F3A] pointer-events-auto shadow-lg"
+        role="navigation"
+        aria-label="Main navigation"
+      >
+        {navItems.map((item) => {
+          const Icon = item.icon
+          return (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              id={item.tabId}
+              aria-label={item.label}
+              className={({ isActive }) =>
+                `flex items-center justify-center min-w-[48px] min-h-[48px] px-4 py-2 rounded-full transition-all duration-200
+                ${isActive ? 'bg-[#01D6BE]' : 'bg-transparent hover:bg-[#01D6BE]/15'}`
               }
-            `}
-          >
-            {({ isActive }) => (
-              <>
-                <Icon 
-                  size={22} 
-                  className={`transition-colors duration-250 ${isActive ? 'text-[#0D9488]' : 'text-[#48484A]'}`}
-                />
-                <span className={`text-[10px] font-medium ${isActive ? 'text-[#0D9488]' : 'text-[#48484A]'}`}>
-                  {item.label}
+            >
+              {({ isActive }) => (
+                <span
+                  className={`flex items-center gap-2 transition-colors duration-200 ${
+                    isActive ? 'text-[#FFFFFF]' : 'text-[#01D6BE]/70'
+                  }`}
+                >
+                  <Icon size={22} aria-hidden="true" />
+                  {isActive && (
+                    <span className="text-[12px] font-bold tracking-wider uppercase">
+                      {item.label}
+                    </span>
+                  )}
                 </span>
-                {isActive && (
-                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 
-                    w-1 h-1 rounded-full bg-[#0D9488]" />
-                )}
-              </>
-            )}
-          </NavLink>
-        )
-      })}
-    </nav>
+              )}
+            </NavLink>
+          )
+        })}
+      </nav>
+    </div>
   )
 }

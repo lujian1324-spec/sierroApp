@@ -198,22 +198,22 @@ export default function PrivacyPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-[#000000] flex flex-col">
+    <div className="min-h-screen bg-[#141414] flex flex-col">
       {/* Header */}
       <div className="flex items-center gap-3 px-5 pt-4 pb-3 safe-area-top border-b border-[rgba(255,255,255,0.06)]">
         <button
           onClick={() => navigate(-1)}
-          className="w-9 h-9 rounded-full bg-[#1C1C1E] flex items-center justify-center text-[#FFFFFF] active:scale-95 transition-transform"
+          className="w-9 h-9 rounded-full bg-[#262626] flex items-center justify-center text-[#FFFFFF] active:scale-95 transition-transform"
         >
           <ArrowLeft size={20} />
         </button>
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-[rgba(13,148,136,0.1)] flex items-center justify-center">
-            <Shield size={16} className="text-[#0D9488]" />
+          <div className="w-8 h-8 rounded-lg bg-[rgba(1,214,190,0.1)] flex items-center justify-center">
+            <Shield size={16} className="text-[#01D6BE]" />
           </div>
           <div>
             <h1 className="text-lg font-bold text-[#FFFFFF]">Privacy Policy</h1>
-            <p className="text-[11px] text-[#8E8E93]">Last updated: May 2026</p>
+            <p className="text-[11px] text-[#A0A0A5]">Last updated: May 2026</p>
           </div>
         </div>
       </div>
@@ -226,21 +226,21 @@ export default function PrivacyPage() {
           transition={{ duration: 0.3 }}
         >
           {/* Intro */}
-          <p className="text-[13px] text-[#8E8E93] leading-relaxed mb-6">
+          <p className="text-[13px] text-[#A0A0A5] leading-relaxed mb-6">
             This Privacy Policy describes how Sierro collects, uses, and protects your personal
             information when you use the Sierro App. We are committed to transparency and giving
             you control over your data.
           </p>
 
           {/* Table of Contents */}
-          <div className="bg-[#1C1C1E] border border-[rgba(255,255,255,0.06)] rounded-[16px] p-4 mb-6">
-            <h2 className="text-[12px] font-bold text-[#8E8E93] uppercase tracking-wider mb-3">Contents</h2>
+          <div className="bg-[#262626] border border-[rgba(255,255,255,0.06)] rounded-[16px] p-4 mb-6">
+            <h2 className="text-[12px] font-bold text-[#A0A0A5] uppercase tracking-wider mb-3">Contents</h2>
             <div className="space-y-1">
               {sections.map(s => (
                 <a
                   key={s.id}
                   href={`#${s.id}`}
-                  className="block text-[12px] text-[#0D9488] py-1 hover:text-[#14B8A6] transition-colors"
+                  className="block text-[12px] text-[#01D6BE] py-1 hover:text-[#14B8A6] transition-colors"
                 >
                   {s.title}
                 </a>
@@ -257,9 +257,9 @@ export default function PrivacyPage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2, delay: i * 0.03 }}
-                className="bg-[#1C1C1E] border border-[rgba(13,148,136,0.08)] rounded-[16px] p-4"
+                className="bg-[#262626] border border-[rgba(1,214,190,0.08)] rounded-[16px] p-4"
               >
-                <h3 className="text-[13px] font-bold text-[#0D9488] mb-2">{section.title}</h3>
+                <h3 className="text-[13px] font-bold text-[#01D6BE] mb-2">{section.title}</h3>
                 <p className="text-[12px] text-[#AEAEB2] leading-relaxed whitespace-pre-line">
                   {section.content}
                 </p>
@@ -273,7 +273,7 @@ export default function PrivacyPage() {
                         <h4 className="text-[12px] font-semibold text-[#FFFFFF] mb-1">
                           {sub.title}
                         </h4>
-                        <p className="text-[11px] text-[#8E8E93] leading-relaxed">
+                        <p className="text-[11px] text-[#A0A0A5] leading-relaxed">
                           {sub.content}
                         </p>
                       </div>
@@ -285,7 +285,7 @@ export default function PrivacyPage() {
           </div>
 
           {/* Footer */}
-          <div className="text-center pt-8 pb-4 text-[11px] text-[#48484A]">
+          <div className="text-center pt-8 pb-4 text-[11px] text-[#636366]">
             &copy; 2026 Sierro Inc. All rights reserved.
           </div>
         </motion.div>

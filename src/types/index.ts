@@ -200,6 +200,14 @@ export interface AppSettings {
   founderBadgeNumber?: number; // 0-100 之间的唯一身份编码
   /** Low battery notification threshold: 10 | 20 | 30 (default: 30) */
   lowBatteryThreshold?: number;
+  /** PRD v1.1 §4.3: Device display icon color */
+  deviceIconColor?: string;
+  /** PRD v1.1 §4.3: Sleep Mode (turn off display) */
+  sleepMode?: boolean;
+  /** PRD v1.1 §4.3: Battery Mode (0=Normal, 1=Backup, 2=Eco) */
+  batteryMode?: number;
+  /** PRD v1.1 §4.6: Solar Status push notification */
+  pushSolarStatus?: boolean;
 }
 
 // 削峰填谷时间段配置

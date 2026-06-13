@@ -1,21 +1,64 @@
 ﻿import { motion } from 'framer-motion'
-import { Zap } from 'lucide-react'
+import { Zap, BatteryMedium, AlertTriangle, BatteryWarning, BatteryLow, Plug } from 'lucide-react'
 
 interface BatteryRingProps {
   percentage: number
   size?: number
   strokeWidth?: number
   isCharging?: boolean
+  isPlugged?: boolean
   timeToFull?: string
+  timeRemaining?: string
   uid?: string
 }
 
-export default function BatteryRing({ 
-  percentage, 
-  size = 160, 
+// PRD v1.1 §5.1: BatteryRing 9 种状态
+// 0=critical (<5%), 1=low (<15%), 2=warning (<25%), 3=normal-low, 4=normal, 5=normal-high, 
+// 6=full (>=95%), 7=charging, 8=plugged
+export type BatteryState = 'critical' | 'low' | 'warning' | 'normal' | 'good' | 'full' | 'charging' | 'plugged' | 'unknown'
+
+function getBatteryState(percentage: number, isCharging: boolean, isPlugged: boolean): BatteryState {
+  if (isCharging) return 'charging'
+  if (isPlugged) return 'plugged'
+  if (percentage <= 5) return 'critical'
+  if (percentage <= 15) return 'low'
+  if (percentage <= 25) return 'warning'
+  if (percentage >= 95) return 'full'
+  return 'normal'
+}
+
+const STATE_COLOR: Record<BatteryState, string> = {
+  critical: '#FF3B30',
+  low: '#FF3B30',
+  warning: '#FF9500',
+  normal: '#01D6BE',
+  good: '#01D6BE',
+  full: '#34C759',
+  charging: '#01D6BE',
+  plugged: '#01D6BE',
+  unknown: '#636366',
+}
+
+const STATE_LABEL: Record<BatteryState, string> = {
+  critical: 'CRITICAL',
+  low: 'LOW BATTERY',
+  warning: 'LOW',
+  normal: '',
+  good: '',
+  full: 'FULL',
+  charging: 'CHARGING',
+  plugged: 'PLUGGED IN',
+  unknown: '',
+}
+
+export default function BatteryRing({
+  percentage,
+  size = 160,
   strokeWidth = 10,
   isCharging = false,
+  isPlugged = false,
   timeToFull = '1h 24m',
+  timeRemaining = '4h 30m',
   uid = 'default',
 }: BatteryRingProps) {
   const radius = (size - strokeWidth) / 2
@@ -23,16 +66,36 @@ export default function BatteryRing({
   const safePercent = Math.max(0, Math.min(100, percentage))
   const safeDashoffset = circumference - (safePercent / 100) * circumference
 
+  const state = getBatteryState(safePercent, isCharging, isPlugged)
+  const ringColor = STATE_COLOR[state]
+  const stateLabel = STATE_LABEL[state]
+  const showTime = !isCharging && !isPlugged
+
+  // 选择状态图标 (色盲友好, PRD v1.1 §9.1)
+  const StateIcon = isCharging ? Zap : isPlugged ? Plug : safePercent <= 15 ? BatteryWarning : safePercent <= 25 ? AlertTriangle : BatteryMedium
+
+  // 可访问性标签 (PRD v1.1 §9.1)
+  const ariaLabel = isCharging
+    ? `Battery charging, ${safePercent} percent, ${timeToFull} until full`
+    : isPlugged
+      ? `Battery plugged in, ${safePercent} percent`
+      : safePercent <= 15
+        ? `Battery low, ${safePercent} percent remaining, ${timeRemaining} runtime`
+        : `Battery ${safePercent} percent, ${timeRemaining} runtime`
+
   return (
-    <div 
+    <div
       className="relative"
       style={{ width: size, height: size }}
+      role="img"
+      aria-label={ariaLabel}
     >
-      <svg 
-        width={size} 
-        height={size} 
+      <svg
+        width={size}
+        height={size}
         viewBox={`0 0 ${size} ${size}`}
         className="transform -rotate-90"
+        aria-hidden="true"
       >
         {/* 背景圆环 */}
         <circle
@@ -40,17 +103,17 @@ export default function BatteryRing({
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="#2C2C2E"
+          stroke="#333333"
           strokeWidth={strokeWidth}
         />
-        
-        {/* 进度圆环 - 纯色扁平 */}
+
+        {/* 进度圆环 - 按状态着色 */}
         <motion.circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="#0D9488"
+          stroke={ringColor}
           strokeWidth={strokeWidth}
           strokeLinecap="round"
           strokeDasharray={circumference}
@@ -59,25 +122,34 @@ export default function BatteryRing({
           transition={{ duration: 0.8, ease: 'easeOut' }}
         />
       </svg>
-      
+
       {/* 中心内容 */}
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         {/* 电量百分比 */}
         <div className="text-[40px] font-extrabold text-[#FFFFFF] leading-none tracking-tight">
-          {safePercent}<span className="text-lg font-medium text-[#8E8E93]">%</span>
+          {safePercent}<span className="text-lg font-medium text-[#A0A0A5]">%</span>
         </div>
-        
-        {/* Charging 状态或倒计时 */}
-        {isCharging ? (
+
+        {/* 状态标签 / 时间 */}
+        {stateLabel ? (
           <div className="flex items-center gap-1 mt-1">
-            <Zap size={12} className="text-[#0D9488]" />
-            <span className="text-[10px] font-semibold text-[#0D9488] tracking-wide">CHARGING</span>
+            <StateIcon size={12} style={{ color: ringColor }} aria-hidden="true" />
+            <span
+              className="text-[10px] font-semibold tracking-wide"
+              style={{ color: ringColor }}
+            >
+              {stateLabel}
+            </span>
           </div>
-        ) : (
-          <div className="text-[10px] text-[#8E8E93] mt-1 tracking-wide">
+        ) : showTime ? (
+          <div className="text-[10px] text-[#A0A0A5] mt-1 tracking-wide" aria-hidden="true">
+            {timeRemaining} remaining
+          </div>
+        ) : isCharging ? (
+          <div className="text-[10px] text-[#A0A0A5] mt-1 tracking-wide" aria-hidden="true">
             {timeToFull} to full
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   )

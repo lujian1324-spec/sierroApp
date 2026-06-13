@@ -26,7 +26,7 @@ function ToastCard({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: str
     success: { icon: CheckCircle, color: '#34C759', bg: 'rgba(52,199,89,0.12)', border: 'rgba(52,199,89,0.25)' },
     warning: { icon: AlertTriangle, color: '#FF9500', bg: 'rgba(255,149,0,0.12)', border: 'rgba(255,149,0,0.25)' },
     error:   { icon: XCircle,      color: '#FF3B30', bg: 'rgba(255,59,48,0.12)',  border: 'rgba(255,59,48,0.25)'  },
-    info:    { icon: Info,          color: '#0D9488', bg: 'rgba(13,148,136,0.12)', border: 'rgba(13,148,136,0.25)' },
+    info:    { icon: Info,          color: '#01D6BE', bg: 'rgba(1,214,190,0.12)', border: 'rgba(1,214,190,0.25)' },
   }
 
   const { icon: Icon, color, bg, border } = config[toast.type]
@@ -51,14 +51,14 @@ function ToastCard({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: str
       <div className="flex-1 min-w-0">
         <div className="text-[13px] font-semibold text-[#FFFFFF] leading-snug">{toast.title}</div>
         {toast.message && (
-          <div className="text-[11px] text-[#8E8E93] mt-0.5 leading-snug">{toast.message}</div>
+          <div className="text-[11px] text-[#A0A0A5] mt-0.5 leading-snug">{toast.message}</div>
         )}
       </div>
       <button
         onClick={() => onDismiss(toast.id)}
         className="flex-shrink-0 w-5 h-5 rounded-full bg-[rgba(255,255,255,0.08)] flex items-center justify-center mt-0.5"
       >
-        <X size={10} className="text-[#8E8E93]" />
+        <X size={10} className="text-[#A0A0A5]" />
       </button>
     </motion.div>
   )

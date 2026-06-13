@@ -43,14 +43,14 @@ function SessionLoadingScreen() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-[#000000] flex items-center justify-center">
+    <div className="min-h-screen bg-[#141414] flex items-center justify-center" role="status" aria-live="polite">
       <div className="flex flex-col items-center gap-4">
-        <div className="w-16 h-16 rounded-[22px] bg-[rgba(13,148,136,0.12)] border border-[rgba(13,148,136,0.3)]
+        <div className="w-16 h-16 rounded-[22px] bg-[rgba(1,214,190,0.12)] border border-[rgba(1,214,190,0.3)]
           flex items-center justify-center">
-          <Zap size={32} className="text-[#0D9488]" />
+          <Zap size={32} className="text-[#01D6BE]" aria-hidden="true" />
         </div>
-        <Loader2 size={20} className="animate-spin text-[#0D9488]" />
-        <p className="text-[13px] text-[#8E8E93]">Restoring session...</p>
+        <Loader2 size={20} className="animate-spin text-[#01D6BE]" aria-hidden="true" />
+        <p className="text-[13px] text-[#A0A0A5]">Restoring session...</p>
       </div>
     </div>
   )
@@ -87,11 +87,11 @@ function AppInner() {
           <Routes location={location}>
             <Route
               path="/login"
-              element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />}
+              element={isAuthenticated ? <Navigate to="/devices" replace /> : <LoginPage />}
             />
             <Route
               path="/register"
-              element={isAuthenticated ? <Navigate to="/" replace /> : <RegisterPage />}
+              element={isAuthenticated ? <Navigate to="/devices" replace /> : <RegisterPage />}
             />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
@@ -101,8 +101,8 @@ function AppInner() {
     )
   }
 
-  // 设备详情页 & Smart Schedule 页单独渲染，不包含底部导航
-  if (location.pathname.startsWith('/device/') || location.pathname === '/smart-schedule' || location.pathname === '/notifications') {
+  // 设备详情页 & Smart Schedule 页 & 通知页单独渲染，不包含底部导航
+  if (location.pathname.startsWith('/device/') || location.pathname === '/smart-schedule' || location.pathname === '/notifications' || location.pathname.startsWith('/profile')) {
     return (
       <div className="h-full w-full bg-bg-base flex flex-col overflow-hidden">
         <div className="flex-1 overflow-hidden relative">
@@ -141,17 +141,23 @@ function AppInner() {
             className="h-full w-full"
           >
             <Routes location={location}>
-              <Route path="/" element={<RequireAuth><DevicePage /></RequireAuth>} />
-              <Route path="/stats" element={<RequireAuth><StatsPage /></RequireAuth>} />
-              <Route path="/settings" element={<RequireAuth><SettingPage /></RequireAuth>} />
+              {/* PRD v1.1 新路由 */}
+              <Route path="/devices" element={<RequireAuth><DevicePage /></RequireAuth>} />
+              <Route path="/insights" element={<RequireAuth><StatsPage /></RequireAuth>} />
+              <Route path="/setting" element={<RequireAuth><SettingPage /></RequireAuth>} />
+              {/* 默认进入 devices */}
+              <Route path="/" element={<Navigate to="/devices" replace />} />
+              {/* 旧路由重定向到新路由（向后兼容） */}
+              <Route path="/stats" element={<Navigate to="/insights" replace />} />
+              <Route path="/settings" element={<Navigate to="/setting" replace />} />
               {/* 未匹配路径重定向 */}
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<Navigate to="/devices" replace />} />
             </Routes>
           </motion.div>
         </AnimatePresence>
       </div>
 
-      {/* 底部导航 */}
+      {/* 底部导航 - PRD v1.1 大写标签 + 48×48dp 触控热区 */}
       <BottomNavigation />
     </div>
   )

@@ -84,7 +84,7 @@ export default function RegisterPage() {
   // 注册成功
   if (success) {
     return (
-      <div className="min-h-screen bg-[#000000] flex flex-col items-center justify-center px-6">
+      <div className="min-h-screen bg-[#141414] flex flex-col items-center justify-center px-6">
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -95,13 +95,13 @@ export default function RegisterPage() {
             <Zap size={36} className="text-[#34C759]" />
           </div>
           <h2 className="text-xl font-bold text-[#FFFFFF]">Registration Successful!</h2>
-          <p className="text-[13px] text-[#8E8E93] text-center max-w-[260px]">
+          <p className="text-[13px] text-[#A0A0A5] text-center max-w-[260px]">
             Your account has been created. You can now sign in with your credentials.
           </p>
           <button
             onClick={() => window.history.back()}
             className="mt-4 px-8 py-3 rounded-xl font-semibold text-[14px]
-              bg-[#0D9488] text-[#000000] active:scale-[0.98] transition-all"
+              bg-[#01D6BE] text-[#000000] active:scale-[0.98] transition-all"
           >
             Go to Sign In
           </button>
@@ -111,11 +111,11 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#000000] flex flex-col px-6 pt-14">
+    <div className="min-h-screen bg-[#141414] flex flex-col px-6 pt-14">
       {/* 返回按钮 */}
       <button
         onClick={() => window.history.back()}
-        className="self-start mb-6 p-2 -ml-2 text-[#8E8E93] active:text-[#FFFFFF]"
+        className="self-start mb-6 p-2 -ml-2 text-[#A0A0A5] active:text-[#FFFFFF]"
       >
         <ArrowLeft size={22} />
       </button>
@@ -128,7 +128,7 @@ export default function RegisterPage() {
         className="mb-8"
       >
         <h1 className="text-[26px] font-bold text-[#FFFFFF]">Create Account</h1>
-        <p className="text-[13px] text-[#8E8E93] mt-1">Sign up to start managing your devices</p>
+        <p className="text-[13px] text-[#A0A0A5] mt-1">Sign up to start managing your devices</p>
       </motion.div>
 
       {/* 表单 */}
@@ -141,7 +141,7 @@ export default function RegisterPage() {
       >
         {/* 账号 */}
         <div>
-          <label className="text-[11px] font-semibold text-[#8E8E93] mb-1.5 flex items-center gap-1.5">
+          <label className="text-[11px] font-semibold text-[#A0A0A5] mb-1.5 flex items-center gap-1.5">
             <User size={12} />
             Account Name
           </label>
@@ -151,15 +151,15 @@ export default function RegisterPage() {
             onChange={e => { setAccount(e.target.value); clearError() }}
             placeholder="Choose an account name"
             autoComplete="username"
-            className="w-full px-4 py-3 rounded-xl bg-[#1C1C1E] border border-[rgba(13,148,136,0.15)]
-              text-[#FFFFFF] text-[14px] placeholder:text-[#48484A]
-              focus:outline-none focus:border-[rgba(13,148,136,0.5)] transition-colors"
+            className="w-full px-4 py-3 rounded-xl bg-[#262626] border border-[rgba(1,214,190,0.15)]
+              text-[#FFFFFF] text-[14px] placeholder:text-[#636366]
+              focus:outline-none focus:border-[rgba(1,214,190,0.5)] transition-colors"
           />
         </div>
 
         {/* 邮箱地址 */}
         <div>
-          <label className="text-[11px] font-semibold text-[#8E8E93] mb-1.5 flex items-center gap-1.5">
+          <label className="text-[11px] font-semibold text-[#A0A0A5] mb-1.5 flex items-center gap-1.5">
             <Mail size={12} />
             Email Address
           </label>
@@ -169,15 +169,15 @@ export default function RegisterPage() {
             onChange={e => { setEmail(e.target.value); clearError() }}
             placeholder="Enter your email"
             autoComplete="email"
-            className="w-full px-4 py-3 rounded-xl bg-[#1C1C1E] border border-[rgba(13,148,136,0.15)]
-              text-[#FFFFFF] text-[14px] placeholder:text-[#48484A]
-              focus:outline-none focus:border-[rgba(13,148,136,0.5)] transition-colors"
+            className="w-full px-4 py-3 rounded-xl bg-[#262626] border border-[rgba(1,214,190,0.15)]
+              text-[#FFFFFF] text-[14px] placeholder:text-[#636366]
+              focus:outline-none focus:border-[rgba(1,214,190,0.5)] transition-colors"
           />
         </div>
 
         {/* 验证码 */}
         <div>
-          <label className="text-[11px] font-semibold text-[#8E8E93] mb-1.5 flex items-center gap-1.5">
+          <label className="text-[11px] font-semibold text-[#A0A0A5] mb-1.5 flex items-center gap-1.5">
             Verification Code
           </label>
           <div className="flex gap-2">
@@ -187,16 +187,16 @@ export default function RegisterPage() {
               onChange={e => { setCaptcha(e.target.value); clearError() }}
               placeholder="Enter verification code"
               maxLength={6}
-              className="flex-1 px-4 py-3 rounded-xl bg-[#1C1C1E] border border-[rgba(13,148,136,0.15)]
-                text-[#FFFFFF] text-[14px] placeholder:text-[#48484A]
-                focus:outline-none focus:border-[rgba(13,148,136,0.5)] transition-colors"
+              className="flex-1 px-4 py-3 rounded-xl bg-[#262626] border border-[rgba(1,214,190,0.15)]
+                text-[#FFFFFF] text-[14px] placeholder:text-[#636366]
+                focus:outline-none focus:border-[rgba(1,214,190,0.5)] transition-colors"
             />
             <button
               type="button"
               onClick={handleSendCaptcha}
               disabled={captchaCooldown > 0 || !email.trim()}
               className="px-4 py-3 rounded-xl text-[13px] font-medium whitespace-nowrap
-                bg-[rgba(13,148,136,0.12)] text-[#0D9488] border border-[rgba(13,148,136,0.2)]
+                bg-[rgba(1,214,190,0.12)] text-[#01D6BE] border border-[rgba(1,214,190,0.2)]
                 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {captchaCooldown > 0 ? `${captchaCooldown}s` : captchaSent ? 'Resend' : 'Send Code'}
@@ -206,7 +206,7 @@ export default function RegisterPage() {
 
         {/* 密码 */}
         <div>
-          <label className="text-[11px] font-semibold text-[#8E8E93] mb-1.5 flex items-center gap-1.5">
+          <label className="text-[11px] font-semibold text-[#A0A0A5] mb-1.5 flex items-center gap-1.5">
             <Lock size={12} />
             Password
           </label>
@@ -217,14 +217,14 @@ export default function RegisterPage() {
               onChange={e => { setPassword(e.target.value); clearError() }}
               placeholder="At least 6 characters"
               autoComplete="new-password"
-              className="w-full px-4 py-3 pr-11 rounded-xl bg-[#1C1C1E] border border-[rgba(13,148,136,0.15)]
-                text-[#FFFFFF] text-[14px] placeholder:text-[#48484A]
-                focus:outline-none focus:border-[rgba(13,148,136,0.5)] transition-colors"
+              className="w-full px-4 py-3 pr-11 rounded-xl bg-[#262626] border border-[rgba(1,214,190,0.15)]
+                text-[#FFFFFF] text-[14px] placeholder:text-[#636366]
+                focus:outline-none focus:border-[rgba(1,214,190,0.5)] transition-colors"
             />
             <button
               type="button"
               onClick={() => setShowPwd(v => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[#48484A] hover:text-[#8E8E93]"
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[#636366] hover:text-[#A0A0A5]"
             >
               {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
@@ -233,7 +233,7 @@ export default function RegisterPage() {
 
         {/* 确认密码 */}
         <div>
-          <label className="text-[11px] font-semibold text-[#8E8E93] mb-1.5 flex items-center gap-1.5">
+          <label className="text-[11px] font-semibold text-[#A0A0A5] mb-1.5 flex items-center gap-1.5">
             <Lock size={12} />
             Confirm Password
           </label>
@@ -243,9 +243,9 @@ export default function RegisterPage() {
             onChange={e => { setConfirmPassword(e.target.value); clearError() }}
             placeholder="Confirm your password"
             autoComplete="new-password"
-            className="w-full px-4 py-3 rounded-xl bg-[#1C1C1E] border border-[rgba(13,148,136,0.15)]
-              text-[#FFFFFF] text-[14px] placeholder:text-[#48484A]
-              focus:outline-none focus:border-[rgba(13,148,136,0.5)] transition-colors"
+            className="w-full px-4 py-3 rounded-xl bg-[#262626] border border-[rgba(1,214,190,0.15)]
+              text-[#FFFFFF] text-[14px] placeholder:text-[#636366]
+              focus:outline-none focus:border-[rgba(1,214,190,0.5)] transition-colors"
           />
         </div>
 
@@ -263,18 +263,18 @@ export default function RegisterPage() {
         )}
 
         {/* Terms & Privacy */}
-        <p className="text-[11px] leading-relaxed text-center text-[#8E8E93] px-4">
+        <p className="text-[11px] leading-relaxed text-center text-[#A0A0A5] px-4">
           By creating an account, you agree to our{' '}
           <Link
             to="/terms"
-            className="text-[#0D9488] underline underline-offset-2 hover:text-[#14B8A6] transition-colors"
+            className="text-[#01D6BE] underline underline-offset-2 hover:text-[#14B8A6] transition-colors"
           >
             Terms of Use
           </Link>
           {' '}and{' '}
           <Link
             to="/privacy"
-            className="text-[#0D9488] underline underline-offset-2 hover:text-[#14B8A6] transition-colors"
+            className="text-[#01D6BE] underline underline-offset-2 hover:text-[#14B8A6] transition-colors"
           >
             Privacy Policy
           </Link>
@@ -285,7 +285,7 @@ export default function RegisterPage() {
           type="submit"
           disabled={loading || !account.trim() || !password.trim()}
           className="w-full py-3.5 rounded-xl font-semibold text-[14px]
-            bg-[#0D9488] text-[#000000]
+            bg-[#01D6BE] text-[#000000]
             disabled:opacity-40 disabled:cursor-not-allowed
             active:scale-[0.98] transition-all flex items-center justify-center gap-2"
         >
