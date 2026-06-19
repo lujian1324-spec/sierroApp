@@ -45,6 +45,7 @@ import {
 } from '../api/deviceApi'
 import type { ApiResponse } from '../utils/apiClient'
 import { useAuthStore } from './authStore'
+import { checkAndNotifyPowerOutage } from '../utils/powerOutageNotification'
 import {
   demoDevices,
   getDemoDeviceState,
@@ -111,7 +112,7 @@ interface DeviceStoreState {
   startRealtimeReport: (deviceId: string | number, clientId: string) => Promise<void>
   stopRealtimeReport: (deviceId: string | number, clientId: string) => Promise<void>
   loadAlarms: (deviceId?: number, page?: number, count?: number, append?: boolean) => Promise<void>
-  dismissAlarm: (alarmId: number) => Promise<void>
+  dismissAlarm: (alarmId: string | number) => Promise<void>
   loadStations: (page?: number, count?: number) => Promise<void>
   createStation: (data: StationAddRequest) => Promise<ApiResponse<unknown>>
   loadPeakValley: (deviceId: string | number) => Promise<PeakValleyBundleResponse | null>
@@ -237,6 +238,15 @@ export const useDeviceStore = create<DeviceStoreState>()(
           if (seq !== stateRequestSeq) return
           if ((result.code === 0 || result.code === '0') && result.data) {
             set({ selectedDeviceState: result.data, stateLoading: false })
+            // Power outage push notification
+            const details = get().selectedDeviceDetails
+            if (details?.isOnline) {
+              checkAndNotifyPowerOutage(
+                details.name,
+                true,
+                result.data.firingAlarms ?? []
+              )
+            }
           } else {
             set({ stateLoading: false })
           }
